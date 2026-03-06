@@ -1,4 +1,14 @@
 ![CI](https://github.com/joklee/ha_daikin_altherma4_modbus/actions/workflows/ci.yml/badge.svg)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/joklee/ha_daikin_altherma4_modbus)
+![GitHub all releases](https://img.shields.io/github/downloads/joklee/ha_daikin_altherma4_modbus/total)
+![GitHub stars](https://img.shields.io/github/stars/joklee/ha_daikin_altherma4_modbus?style=social)
+![GitHub forks](https://img.shields.io/github/forks/joklee/ha_daikin_altherma4_modbus?style=social)
+![GitHub issues](https://img.shields.io/github/issues/joklee/ha_daikin_altherma4_modbus)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/joklee/ha_daikin_altherma4_modbus)
+![License](https://img.shields.io/github/license/joklee/ha_daikin_altherma4_modbus)
+![HACS](https://img.shields.io/badge/HACS-Default-orange)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue)
 
 # Daikin Altherma 4 Modbus Integration for Home Assistant
 
@@ -210,22 +220,85 @@ The **External Electric Power Sensor Entity ID** parameter allows you to integra
 - Enhances the calculated **Coefficient of Performance (CoP)** with real electrical power data
 - Improves **Heat Pump Power Calculated** accuracy
 - Enables comprehensive energy consumption tracking
+- Provides real-time efficiency monitoring
 
 **Compatible Sensors:**
-- Home Assistant energy monitoring sensors (e.g., from smart plugs, energy meters)
-- Modbus power sensors from your electrical system
-- Any sensor providing power measurements in **Watts (W)**
+- **Smart Plugs**: Shelly, TP-Link Kasa, Sonoff POW (recommended for whole house monitoring)
+- **Energy Meters**: Modbus power sensors, DIN-rail energy meters
+- **Home Assistant Energy**: Built-in energy monitoring sensors
+- **Any sensor** providing power measurements in **Watts (W)**
 
-**How to Use:**
-1. Enter the full entity ID of your power sensor (e.g., `sensor.shelly_em_power`, `sensor.modbus_electric_power`)
-2. The sensor must provide power readings in Watts
-3. The integration will automatically use this data for enhanced calculations
+**Recommended Setup Options:**
 
-**Benefits:**
-- More accurate CoP calculations
-- Real-time energy efficiency monitoring
-- Better understanding of system performance
-- Integration with Home Assistant Energy dashboard
+**Option 1: Whole House Monitoring (Recommended)**
+```
+Electric Power Sensor Entity ID: sensor.shelly_em_power
+```
+- **Measures**: Total house power consumption including heat pump
+- **Benefits**: Complete energy overview, accurate overall CoP
+- **Best for**: Understanding total system efficiency
+
+**Option 2: Heat Pump Only Monitoring**
+```
+Electric Power Sensor Entity ID: sensor.modbus_heatpump_power
+```
+- **Measures**: Only heat pump electrical consumption
+- **Benefits**: Pure heat pump efficiency calculation
+- **Best for**: Technical analysis and optimization
+
+**Option 3: Sub-metered Monitoring**
+```
+Electric Power Sensor Entity ID: sensor.heat_pump_circuit_power
+```
+- **Measures**: Dedicated circuit for heat pump only
+- **Benefits**: Isolated measurement
+- **Best for**: Precise heat pump performance analysis
+
+**How to Configure:**
+1. **Install your power sensor** (smart plug, energy meter, etc.)
+2. **Add to Home Assistant** if not already integrated
+3. **Find the entity ID** in Developer Tools → States
+4. **Enter the full entity ID** in the integration configuration
+5. **Verify the sensor** provides power readings in Watts
+
+**Configuration Examples:**
+```
+# Shelly EM (Whole House)
+sensor.shelly_em_power
+
+# Shelly Plug (Heat Pump Only)
+sensor.shelly_plug_power
+
+# Modbus Energy Meter
+sensor.modbus_electric_power
+
+# Home Assistant Energy
+sensor.total_home_power
+```
+
+**Benefits When Configured:**
+- **Accurate CoP**: Real-time efficiency calculation (thermal power ÷ electrical power)
+- **Energy Dashboard**: Integration with Home Assistant Energy monitoring
+- **Cost Tracking**: Calculate actual heating costs
+- **Performance Alerts**: Monitor efficiency drops or issues
+- **Historical Analysis**: Track efficiency over time and seasons
+
+**Technical Details:**
+- **Required Unit**: Watts (W)
+- **Update Frequency**: Should match or exceed integration scan interval
+- **Accuracy**: ±1% recommended for reliable CoP calculations
+- **Range**: Should cover expected power consumption (typically 1-10kW for heat pumps)
+
+**Troubleshooting:**
+- **Sensor not found**: Verify entity ID in Developer Tools → States
+- **Wrong units**: Ensure sensor reports in Watts, not kW or VA
+- **No CoP data**: Check if power sensor is updating regularly
+- **Inaccurate readings**: Calibrate or verify sensor accuracy
+
+**Advanced Usage:**
+- **Multiple sensors**: Use template sensors to combine measurements
+- **Conditional logic**: Automate based on efficiency thresholds
+- **Integration**: Combine with energy storage or solar monitoring
 
 ### Options Flow
 After installation, you can configure the external electric power sensor through:
