@@ -120,7 +120,7 @@ class RealModbusTcpClient(ModbusClientInterface):
         """Read input registers."""
         async with self._lock:
             await self._ensure_connection()
-            _LOGGER.warning(
+            _LOGGER.debug(
                 f"Reading input registers from address {address} with count {count}"
             )
             original_response = await self._client.read_input_registers(
@@ -132,7 +132,7 @@ class RealModbusTcpClient(ModbusClientInterface):
         """Read holding registers."""
         async with self._lock:
             await self._ensure_connection()
-            _LOGGER.warning(
+            _LOGGER.debug(
                 f"Reading holding registers from address {address} with count {count}"
             )
             original_response = await self._client.read_holding_registers(
@@ -144,7 +144,7 @@ class RealModbusTcpClient(ModbusClientInterface):
         """Read discrete inputs."""
         async with self._lock:
             await self._ensure_connection()
-            _LOGGER.warning(
+            _LOGGER.debug(
                 f"Reading discrete inputs from address {address} with count {count}"
             )
             original_response = await self._client.read_discrete_inputs(
@@ -156,7 +156,7 @@ class RealModbusTcpClient(ModbusClientInterface):
         """Read coils."""
         async with self._lock:
             await self._ensure_connection()
-            _LOGGER.warning(f"Reading coils from address {address} with count {count}")
+            _LOGGER.debug(f"Reading coils from address {address} with count {count}")
             original_response = await self._client.read_coils(address - 1, count=count)
             return OneBasedModbusResponse(original_response, address, is_bits=True)
 
