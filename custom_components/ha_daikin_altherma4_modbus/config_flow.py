@@ -11,6 +11,13 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_PORT = 502
 
 
+def _entry_value(config_entry, key, default=None):
+    """Read option value with fallback to legacy entry data."""
+    options = getattr(config_entry, "options", {}) or {}
+    data = getattr(config_entry, "data", {}) or {}
+    return options.get(key, data.get(key, default))
+
+
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Minimaler Config Flow für Daikin Altherma 4 Modbus."""
 
@@ -22,11 +29,24 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Scan Interval Default setzen, falls nicht angegeben
-            if "scan_interval" not in user_input:
-                user_input["scan_interval"] = 10
+            data = {
+                CONF_HOST: user_input[CONF_HOST],
+                CONF_PORT: user_input.get(CONF_PORT, DEFAULT_PORT),
+            }
+            options = {
+                "scan_interval": user_input.get("scan_interval", NORMAL_SCAN_INTERVAL),
+                "slow_scan_interval": user_input.get(
+                    "slow_scan_interval", SLOW_SCAN_INTERVAL
+                ),
+                "demo_mode": user_input.get("demo_mode", False),
+            }
+            electric_power_sensor = user_input.get("electric_power_sensor", "").strip()
+            if electric_power_sensor:
+                options["electric_power_sensor"] = electric_power_sensor
             return self.async_create_entry(
-                title=f"Daikin Altherma 4 ({user_input[CONF_HOST]})", data=user_input
+                title=f"Daikin Altherma 4 ({user_input[CONF_HOST]})",
+                data=data,
+                options=options,
             )
 
         data_schema = vol.Schema(
@@ -63,96 +83,49 @@ class OptionsFlow(config_entries.OptionsFlow):
         _LOGGER.debug(f"OptionsFlow step_init. User input: {user_input}")
 
         if user_input is not None:
-            # Validate host
-            host = user_input.get("host", "").strip()
-            if not host:
-                errors["host"] = "invalid_host"
-
-            # Validate port
-            port = user_input.get("port")
-            if port is not None and (port < 1 or port > 65535):
-                errors["port"] = "invalid_port"
-
             # If no errors, proceed with update
             if not errors:
-                # Process all options
-                scan_interval = user_input.get("scan_interval")
-                slow_scan_interval = user_input.get("slow_scan_interval")
-                electric_power_sensor = user_input.get("electric_power_sensor")
+                electric_power_sensor = user_input.get(
+                    "electric_power_sensor", ""
+                ).strip()
+                options_data = {
+                    "scan_interval": user_input.get(
+                        "scan_interval", NORMAL_SCAN_INTERVAL
+                    ),
+                    "slow_scan_interval": user_input.get(
+                        "slow_scan_interval", SLOW_SCAN_INTERVAL
+                    ),
+                    "demo_mode": user_input.get("demo_mode", False),
+                }
+                if electric_power_sensor:
+                    options_data["electric_power_sensor"] = electric_power_sensor
 
-                # Create options data
-                options_data = {}
-
-                # Update config entry data with connection parameters
-                new_data = dict(self._config_entry.data)
-
-                # Update host
-                if host:
-                    new_data["host"] = host
-                    _LOGGER.debug(f"Updating host to: {host}")
-
-                # Update port
-                if port is not None:
-                    new_data["port"] = port
-                    _LOGGER.debug(f"Updating port to: {port}")
-
-                # Update scan_interval
-                if scan_interval is not None:
-                    new_data["scan_interval"] = scan_interval
-                    _LOGGER.debug(f"Updating scan_interval to: {scan_interval}")
-
-                # Update slow_scan_interval
-                if slow_scan_interval is not None:
-                    new_data["slow_scan_interval"] = slow_scan_interval
-                    _LOGGER.debug(
-                        f"Updating slow_scan_interval to: {slow_scan_interval}"
-                    )
-
-                # Update electric_power_sensor
-                if electric_power_sensor and electric_power_sensor.strip():
-                    new_data["electric_power_sensor"] = electric_power_sensor.strip()
-                    _LOGGER.debug(
-                        f"Updating electric_power_sensor to: {electric_power_sensor.strip()}"
-                    )
-                else:
-                    if "electric_power_sensor" in new_data:
-                        del new_data["electric_power_sensor"]
-                        _LOGGER.debug("Removing electric_power_sensor")
-
-                # Update demo_mode
-                if "demo_mode" in user_input:
-                    new_data["demo_mode"] = user_input["demo_mode"]
-                    _LOGGER.debug(f"Updating demo_mode to: {user_input['demo_mode']}")
-
-                _LOGGER.debug(f"New config entry data will be: {new_data}")
-                self.hass.config_entries.async_update_entry(
-                    self._config_entry, data=new_data
-                )
-
-                result = self.async_create_entry(title="", data=options_data)
-                _LOGGER.debug(f"async_create_entry result: {result}")
-                return result
+                _LOGGER.debug("Updating config entry options: %s", options_data)
+                return self.async_create_entry(title="", data=options_data)
 
         # Get current values
-        current_host = self._config_entry.data.get("host", "")
-        current_port = self._config_entry.data.get("port", DEFAULT_PORT)
-        current_scan_interval = self._config_entry.data.get("scan_interval", 10)
-        current_slow_scan_interval = self._config_entry.data.get(
-            "slow_scan_interval", SLOW_SCAN_INTERVAL
+        current_scan_interval = _entry_value(
+            self._config_entry, "scan_interval", NORMAL_SCAN_INTERVAL
         )
-        current_electric_power_sensor = self._config_entry.data.get(
-            "electric_power_sensor", ""
+        current_slow_scan_interval = _entry_value(
+            self._config_entry, "slow_scan_interval", SLOW_SCAN_INTERVAL
         )
-        current_demo_mode = self._config_entry.data.get("demo_mode", False)
+        current_electric_power_sensor = _entry_value(
+            self._config_entry, "electric_power_sensor", ""
+        )
+        current_demo_mode = _entry_value(self._config_entry, "demo_mode", False)
 
         _LOGGER.debug(
-            f"OptionsFlow showing form. Current values: host='{current_host}', port={current_port}, scan_interval={current_scan_interval}, slow_scan_interval={current_slow_scan_interval}, electric_power_sensor='{current_electric_power_sensor}'"
+            "OptionsFlow showing form. Current values: scan_interval=%s, "
+            "slow_scan_interval=%s, electric_power_sensor='%s', demo_mode=%s",
+            current_scan_interval,
+            current_slow_scan_interval,
+            current_electric_power_sensor,
+            current_demo_mode,
         )
 
         data_schema = vol.Schema(
             {
-                vol.Required("host", default=current_host): str,
-                vol.Optional("port", default=current_port): int,
                 vol.Optional("scan_interval", default=current_scan_interval): int,
                 vol.Optional(
                     "slow_scan_interval", default=current_slow_scan_interval

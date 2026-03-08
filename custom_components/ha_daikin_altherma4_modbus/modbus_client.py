@@ -3,7 +3,14 @@
 import logging
 import asyncio
 from pymodbus.client import AsyncModbusTcpClient
+import pymodbus.exceptions
 from .client_interface import ModbusClientInterface
+from .exceptions import (
+    ModbusReadException,
+    ModbusWriteException,
+    ModbusTimeoutException,
+    ModbusDeviceException,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -123,10 +130,27 @@ class RealModbusTcpClient(ModbusClientInterface):
             _LOGGER.debug(
                 f"Reading input registers from address {address} with count {count}"
             )
-            original_response = await self._client.read_input_registers(
-                address - 1, count=count
-            )
-            return OneBasedModbusResponse(original_response, address, is_bits=False)
+            try:
+                original_response = await self._client.read_input_registers(
+                    address - 1, count=count
+                )
+                if self._is_modbus_error(original_response):
+                    raise ModbusDeviceException(
+                        f"Device error reading input registers at {address}"
+                    )
+                return OneBasedModbusResponse(original_response, address, is_bits=False)
+            except pymodbus.exceptions.ModbusIOException as e:
+                raise ModbusReadException(
+                    f"I/O error reading input registers at {address}", e
+                )
+            except asyncio.TimeoutError as e:
+                raise ModbusTimeoutException(
+                    f"Timeout reading input registers at {address}", e
+                )
+            except pymodbus.exceptions.ModbusException as e:
+                raise ModbusReadException(
+                    f"Modbus error reading input registers at {address}", e
+                )
 
     async def read_holding_registers(self, address: int, count: int):
         """Read holding registers."""
@@ -135,10 +159,27 @@ class RealModbusTcpClient(ModbusClientInterface):
             _LOGGER.debug(
                 f"Reading holding registers from address {address} with count {count}"
             )
-            original_response = await self._client.read_holding_registers(
-                address - 1, count=count
-            )
-            return OneBasedModbusResponse(original_response, address, is_bits=False)
+            try:
+                original_response = await self._client.read_holding_registers(
+                    address - 1, count=count
+                )
+                if self._is_modbus_error(original_response):
+                    raise ModbusDeviceException(
+                        f"Device error reading holding registers at {address}"
+                    )
+                return OneBasedModbusResponse(original_response, address, is_bits=False)
+            except pymodbus.exceptions.ModbusIOException as e:
+                raise ModbusReadException(
+                    f"I/O error reading holding registers at {address}", e
+                )
+            except asyncio.TimeoutError as e:
+                raise ModbusTimeoutException(
+                    f"Timeout reading holding registers at {address}", e
+                )
+            except pymodbus.exceptions.ModbusException as e:
+                raise ModbusReadException(
+                    f"Modbus error reading holding registers at {address}", e
+                )
 
     async def read_discrete_inputs(self, address: int, count: int):
         """Read discrete inputs."""
@@ -147,30 +188,88 @@ class RealModbusTcpClient(ModbusClientInterface):
             _LOGGER.debug(
                 f"Reading discrete inputs from address {address} with count {count}"
             )
-            original_response = await self._client.read_discrete_inputs(
-                address - 1, count=count
-            )
-            return OneBasedModbusResponse(original_response, address, is_bits=True)
+            try:
+                original_response = await self._client.read_discrete_inputs(
+                    address - 1, count=count
+                )
+                if self._is_modbus_error(original_response):
+                    raise ModbusDeviceException(
+                        f"Device error reading discrete inputs at {address}"
+                    )
+                return OneBasedModbusResponse(original_response, address, is_bits=True)
+            except pymodbus.exceptions.ModbusIOException as e:
+                raise ModbusReadException(
+                    f"I/O error reading discrete inputs at {address}", e
+                )
+            except asyncio.TimeoutError as e:
+                raise ModbusTimeoutException(
+                    f"Timeout reading discrete inputs at {address}", e
+                )
+            except pymodbus.exceptions.ModbusException as e:
+                raise ModbusReadException(
+                    f"Modbus error reading discrete inputs at {address}", e
+                )
 
     async def read_coils(self, address: int, count: int):
         """Read coils."""
         async with self._lock:
             await self._ensure_connection()
             _LOGGER.debug(f"Reading coils from address {address} with count {count}")
-            original_response = await self._client.read_coils(address - 1, count=count)
-            return OneBasedModbusResponse(original_response, address, is_bits=True)
+            try:
+                original_response = await self._client.read_coils(
+                    address - 1, count=count
+                )
+                if self._is_modbus_error(original_response):
+                    raise ModbusDeviceException(
+                        f"Device error reading coils at {address}"
+                    )
+                return OneBasedModbusResponse(original_response, address, is_bits=True)
+            except pymodbus.exceptions.ModbusIOException as e:
+                raise ModbusReadException(f"I/O error reading coils at {address}", e)
+            except asyncio.TimeoutError as e:
+                raise ModbusTimeoutException(f"Timeout reading coils at {address}", e)
+            except pymodbus.exceptions.ModbusException as e:
+                raise ModbusReadException(f"Modbus error reading coils at {address}", e)
 
     async def write_holding_register(self, address: int, value: int):
         async with self._lock:
             await self._ensure_connection()
-            _LOGGER.info(f"Writing to holding register {address} with value {value}")
-            return await self._client.write_register(address - 1, value)
+            _LOGGER.debug(f"Writing to holding register {address} with value {value}")
+            try:
+                result = await self._client.write_register(address - 1, value)
+                if self._is_modbus_error(result):
+                    raise ModbusDeviceException(
+                        f"Device error writing holding register {address}"
+                    )
+                return result
+            except pymodbus.exceptions.ModbusIOException as e:
+                raise ModbusWriteException(
+                    f"I/O error writing holding register {address}", e
+                )
+            except asyncio.TimeoutError as e:
+                raise ModbusTimeoutException(
+                    f"Timeout writing holding register {address}", e
+                )
+            except pymodbus.exceptions.ModbusException as e:
+                raise ModbusWriteException(
+                    f"Modbus error writing holding register {address}", e
+                )
 
     async def write_coil_register(self, address: int, value: bool):
         async with self._lock:
             await self._ensure_connection()
-            _LOGGER.info(f"Writing to coil register {address} with value {value}")
-            return await self._client.write_coil(address - 1, value)
+            _LOGGER.debug(f"Writing to coil register {address} with value {value}")
+            try:
+                result = await self._client.write_coil(address - 1, value)
+                if self._is_modbus_error(result):
+                    raise ModbusDeviceException(f"Device error writing coil {address}")
+                return result
+            except pymodbus.exceptions.ModbusIOException as e:
+                raise ModbusWriteException(f"I/O error writing coil {address}", e)
+            except asyncio.TimeoutError as e:
+                raise ModbusTimeoutException(f"Timeout writing coil {address}", e)
+            except pymodbus.exceptions.ModbusException as e:
+                raise ModbusWriteException(f"Modbus error writing coil {address}", e)
 
     async def _ensure_connection(self) -> None:
         """Ensure connection is active before operations."""
@@ -180,9 +279,41 @@ class RealModbusTcpClient(ModbusClientInterface):
             )
             await self.connect()
 
+    @staticmethod
+    def _is_modbus_error(response) -> object | bool:
+        """Check if Modbus response indicates an error, compatible with both mock and real clients."""
+        # Try isError() first (pymodbus standard)
+        if hasattr(response, "isError") and callable(response.isError):
+            return response.isError()
+        # Fallback to checking for error code/function code
+        if hasattr(response, "function_code") and hasattr(response, "exception_code"):
+            return response.function_code >= 0x80
+        return False
+
     @classmethod
     def clear_cache(cls):
         """Clear the client cache (useful for testing or reconnection)."""
-        global _client_cache
+        global _client_cache, _client_locks
         _client_cache.clear()
+        _client_locks.clear()
         _LOGGER.debug("AsyncModbusTcpClient cache cleared")
+
+    @classmethod
+    async def async_close_cached_client(cls, host: str, port: int = 502) -> None:
+        """Close and remove a specific cached client."""
+        global _client_cache, _client_locks
+        cache_key = f"{host}:{port}"
+        client = _client_cache.get(cache_key)
+
+        if client is None:
+            return
+
+        try:
+            if getattr(client, "connected", False):
+                client.close()
+        except Exception as err:
+            _LOGGER.debug("Failed closing cached client %s: %s", cache_key, err)
+        finally:
+            _client_cache.pop(cache_key, None)
+            _client_locks.pop(cache_key, None)
+            _LOGGER.debug("Removed cached AsyncModbusTcpClient for %s", cache_key)
