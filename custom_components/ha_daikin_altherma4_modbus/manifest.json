@@ -9,5 +9,5 @@
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/joklee/ha_daikin_altherma4_modbus/issues",
     "requirements": ["pymodbus>=3.5"],
-    "version": "0.5.1"
+    "version": "v0.5.2"
   }
