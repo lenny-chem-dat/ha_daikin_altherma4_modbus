@@ -275,7 +275,7 @@ async def test_config_flow_user_step_separates_data_and_options(monkeypatch):
 
     result = await flow.async_step_user(
         {
-            "host": "192.168.1.20",
+            "host": " 192.168.1.20 ",
             "port": 1502,
             "scan_interval": 15,
             "slow_scan_interval": 900,
@@ -286,6 +286,7 @@ async def test_config_flow_user_step_separates_data_and_options(monkeypatch):
 
     assert result["type"] == "create_entry"
     assert result["data"] == {"host": "192.168.1.20", "port": 1502}
+    assert result["title"] == "Daikin Altherma 4 (192.168.1.20)"
     assert result["options"] == {
         "scan_interval": 15,
         "slow_scan_interval": 900,
@@ -322,6 +323,85 @@ async def test_options_flow_updates_only_options(monkeypatch):
         "demo_mode": True,
     }
     assert entry.data == {"host": "192.168.1.10", "port": 502}
+
+
+@pytest.mark.asyncio
+async def test_config_flow_rejects_invalid_port(monkeypatch):
+    config_flow = _load_config_flow_module(monkeypatch)
+    flow = config_flow.ConfigFlow()
+
+    result = await flow.async_step_user(
+        {
+            "host": "192.168.1.20",
+            "port": 70000,
+            "scan_interval": 10,
+            "slow_scan_interval": 600,
+            "demo_mode": False,
+        }
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"]["port"] == "invalid_port"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_rejects_invalid_host(monkeypatch):
+    config_flow = _load_config_flow_module(monkeypatch)
+    flow = config_flow.ConfigFlow()
+
+    result = await flow.async_step_user(
+        {
+            "host": "invalid host",
+            "port": 502,
+            "scan_interval": 10,
+            "slow_scan_interval": 600,
+            "demo_mode": False,
+        }
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"]["host"] == "invalid_host"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_rejects_invalid_scan_intervals(monkeypatch):
+    config_flow = _load_config_flow_module(monkeypatch)
+    flow = config_flow.ConfigFlow()
+
+    result = await flow.async_step_user(
+        {
+            "host": "192.168.1.20",
+            "port": 502,
+            "scan_interval": 0,
+            "slow_scan_interval": 5,
+            "demo_mode": False,
+        }
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"]["scan_interval"] == "invalid_scan_interval"
+
+
+@pytest.mark.asyncio
+async def test_options_flow_rejects_slow_interval_smaller_than_scan(monkeypatch):
+    config_flow = _load_config_flow_module(monkeypatch)
+    entry = SimpleNamespace(
+        data={"host": "192.168.1.10", "port": 502},
+        options={"scan_interval": 10, "slow_scan_interval": 600, "demo_mode": False},
+    )
+    flow = config_flow.OptionsFlow(entry)
+
+    result = await flow.async_step_init(
+        {
+            "scan_interval": 60,
+            "slow_scan_interval": 10,
+            "electric_power_sensor": "sensor.power",
+            "demo_mode": False,
+        }
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"]["slow_scan_interval"] == "slow_must_be_gte_scan"
 
 
 @pytest.mark.asyncio

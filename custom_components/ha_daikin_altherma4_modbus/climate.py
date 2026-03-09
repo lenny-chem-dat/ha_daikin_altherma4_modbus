@@ -9,6 +9,7 @@ from homeassistant.components.climate.const import (
     HVACAction,
 )
 from homeassistant.const import UnitOfTemperature
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     DOMAIN,
@@ -78,6 +79,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         self._attr_supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
         )
+        # Register holding_3 supports Auto/Heating/Cooling, but no dedicated Off state.
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
         self._attr_device_info = CALCULATED_DEVICE_INFO
         self._attr_translation_key = "daikin_thermostat_climate"
@@ -193,9 +195,9 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         quiet_data = self._get_register_data(f"{DOMAIN}_{REGISTER_QUIET_MODE}")
         quiet_raw = quiet_data.get("value", 0)
 
-        # Map quiet mode values to fan modes
-        quiet_modes = {0: FAN_AUTO, 1: FAN_MANUAL, 2: FAN_OFF}
-        return quiet_modes.get(quiet_raw, FAN_AUTO)
+        # Keep read mapping aligned with const.SELECT_REGISTERS enum_map for holding_9.
+        quiet_modes = {0: FAN_OFF, 1: FAN_AUTO, 2: FAN_MANUAL}
+        return quiet_modes.get(quiet_raw, FAN_OFF)
 
     @property
     def fan_modes(self):
@@ -252,47 +254,65 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         op_mode_raw = offset_data["op_mode_raw"]
 
         try:
+            result = None
             if op_mode_raw == HVAC_COOL:
-                await self.coordinator.data_manager.write_holding_register(
+                result = await self.coordinator.data_manager.write_holding_register(
                     REGISTER_OFFSET_COOLING, offset_raw
                 )
             else:
-                await self.coordinator.data_manager.write_holding_register(
+                result = await self.coordinator.data_manager.write_holding_register(
                     REGISTER_OFFSET_HEATING, offset_raw
                 )
+            if result is None:
+                raise HomeAssistantError("Failed to set thermostat offset")
             _LOGGER.debug(f"Set thermostat offset to {offset}°C (raw: {offset_raw})")
         except Exception as e:
             _LOGGER.error(f"Failed to set thermostat offset: {e}")
+            raise HomeAssistantError("Failed to set thermostat offset") from e
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
+        # Keep semantics explicit: this entity has no native OFF in holding_3.
+        # For service compatibility, OFF is coerced to AUTO.
         mode_map = {
-            HVACMode.AUTO: HVAC_OFF,
+            HVACMode.AUTO: 0,
             HVACMode.HEAT: HVAC_HEAT,
             HVACMode.COOL: HVAC_COOL,
+            HVACMode.OFF: 0,
         }
+        if hvac_mode == HVACMode.OFF:
+            _LOGGER.debug(
+                "HVAC OFF requested but not supported by holding_3; using AUTO"
+            )
         mode_raw = mode_map.get(hvac_mode, 0)
 
         try:
-            await self.coordinator.data_manager.write_holding_register(
+            result = await self.coordinator.data_manager.write_holding_register(
                 REGISTER_OPERATION_MODE, mode_raw
             )
+            if result is None:
+                raise HomeAssistantError("Failed to set HVAC mode")
             _LOGGER.debug(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
         except Exception as e:
             _LOGGER.error(f"Failed to set HVAC mode: {e}")
+            raise HomeAssistantError("Failed to set HVAC mode") from e
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode (quiet mode)."""
-        fan_map = {FAN_OFF: HVAC_OFF, FAN_AUTO: HVAC_HEAT, FAN_MANUAL: HVAC_COOL}
+        # Keep write mapping aligned with const.SELECT_REGISTERS enum_map for holding_9.
+        fan_map = {FAN_OFF: 0, FAN_AUTO: 1, FAN_MANUAL: 2}
         mode_raw = fan_map.get(fan_mode, 0)
 
         try:
-            await self.coordinator.data_manager.write_holding_register(
+            result = await self.coordinator.data_manager.write_holding_register(
                 REGISTER_QUIET_MODE, mode_raw
             )
+            if result is None:
+                raise HomeAssistantError("Failed to set fan mode")
             _LOGGER.debug(f"Set fan mode to {fan_mode} (raw: {mode_raw})")
         except Exception as e:
             _LOGGER.error(f"Failed to set fan mode: {e}")
+            raise HomeAssistantError("Failed to set fan mode") from e
 
     @property
     def extra_state_attributes(self):
@@ -329,12 +349,12 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         }
 
     async def async_turn_on(self):
-        """Turn on DHW heat-up."""
+        """Turn thermostat control on (mapped to AUTO mode)."""
         await self.async_set_hvac_mode(HVACMode.AUTO)
 
     async def async_turn_off(self):
-        """Turn off DHW heat-up."""
-        await self.async_set_hvac_mode(HVACMode.OFF)
+        """Compatibility path for turn_off; this thermostat has no native OFF."""
+        await self.async_set_hvac_mode(HVACMode.AUTO)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):

@@ -113,18 +113,6 @@ class UnifiedWriteProxy:
             f"{DOMAIN}_register_written", event_data
         )
 
-    async def _async_refresh_after_write(self) -> None:
-        """Refresh both source coordinators without aborting on single failures."""
-        results = await asyncio.gather(
-            self._slow_coordinator.async_request_refresh(),
-            self._normal_coordinator.async_request_refresh(),
-            return_exceptions=True,
-        )
-
-        for result in results:
-            if isinstance(result, Exception):
-                _LOGGER.warning("Post-write refresh failed: %s", result)
-
     async def write_holding_register(self, register_name: str, value: int) -> Any:
         """Write a holding register and fire domain event."""
         result = await self._slow_coordinator.data_manager.write_holding_register(
@@ -165,6 +153,7 @@ class UnifiedCoordinator(DataUpdateCoordinator):
         self.slow_coordinator = slow_coordinator
         self.data_manager = UnifiedWriteProxy(normal_coordinator, slow_coordinator)
         self._unsubscribers: list = []
+        self._refresh_tasks: set[asyncio.Task[Any]] = set()
 
     async def async_setup(self) -> None:
         """Attach listeners to source coordinators and domain events."""
@@ -196,6 +185,13 @@ class UnifiedCoordinator(DataUpdateCoordinator):
             except Exception as err:
                 _LOGGER.debug("Failed to unsubscribe unified listener: %s", err)
 
+        if self._refresh_tasks:
+            for task in tuple(self._refresh_tasks):
+                task.cancel()
+
+            await asyncio.gather(*self._refresh_tasks, return_exceptions=True)
+            self._refresh_tasks.clear()
+
     def _handle_source_coordinator_update(self) -> None:
         """Push merged data whenever one source coordinator updates."""
         self.async_set_updated_data(self.manager.get_all_data())
@@ -206,14 +202,19 @@ class UnifiedCoordinator(DataUpdateCoordinator):
             f"Write event received for register {event.data.get('register_name')}, "
             f"triggering automatic refresh"
         )
-        # Trigger refresh after write operation
-        asyncio.create_task(self._async_refresh_after_write())
+        # Track refresh tasks so they can be cancelled on unload.
+        if hasattr(self.hass, "async_create_task"):
+            task = self.hass.async_create_task(self._async_refresh_after_write())
+        else:
+            task = asyncio.create_task(self._async_refresh_after_write())
+        self._refresh_tasks.add(task)
+        task.add_done_callback(self._refresh_tasks.discard)
 
     async def _async_refresh_after_write(self) -> None:
         """Refresh both source coordinators after write operation."""
         results = await asyncio.gather(
-            self._slow_coordinator.async_request_refresh(),
-            self._normal_coordinator.async_request_refresh(),
+            self.slow_coordinator.async_request_refresh(),
+            self.normal_coordinator.async_request_refresh(),
             return_exceptions=True,
         )
 
