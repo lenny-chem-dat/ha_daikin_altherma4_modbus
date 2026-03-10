@@ -1,17 +1,20 @@
 import logging
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
+
 from .config_entry_utils import entry_value
 from .const import (
+    CALCULATED_DEVICE_INFO,
+    CALCULATED_SENSORS,
     DOMAIN,
     INPUT_DEVICE_INFO,
-    CALCULATED_DEVICE_INFO,
     INPUT_REGISTERS,
-    CALCULATED_SENSORS,
 )
+from .utils import to_signed_16bit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -241,9 +244,8 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         if val == 32765 or val == 32766:
             return None
 
-        # Handle signed 16-bit integers
-        if val > 32767:  # If value is negative (2's complement)
-            val = val - 65536
+        # Convert unsigned 16-bit to signed integer safely
+        val = to_signed_16bit(val)
 
         # ENUM Mapping
         if self._enum_map:

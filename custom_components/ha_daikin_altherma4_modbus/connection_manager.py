@@ -1,10 +1,11 @@
 """Modbus client connection management for Daikin Altherma integration."""
 
 import logging
-from .mock_client import MockModbusTcpClient
-from .modbus_client import RealModbusTcpClient
+
 from .client_interface import ModbusClientInterface
 from .exceptions import ModbusConnectionException, ModbusTimeoutException
+from .mock_client import MockModbusTcpClient
+from .modbus_client import RealModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ async def ensure_modbus_connection(
             client = MockModbusTcpClient(host, port=port)
         else:
             _LOGGER.debug(f"Creating new Modbus TCP client for {host}:{port}")
-            client = RealModbusTcpClient(host, port=port)
+            client = await RealModbusTcpClient.create(host, port=port)
 
         _LOGGER.debug(f"Connecting to Modbus TCP server at {host}:{port}")
         await connect_modbus_client(client, host, port, "connection")
