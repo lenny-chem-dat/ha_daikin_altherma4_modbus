@@ -350,7 +350,7 @@
         "name": "Außenlufttemperatur"
       },
       "input_45": {
-        "name": "Temperatur der KältemittelFlüssigkeit"
+        "name": "Temperatur der Kältemittel-Flüssigkeit"
       },
       "input_49": {
         "name": "Durchflussmenge"

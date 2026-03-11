@@ -180,6 +180,18 @@ INPUT_REGISTERS = [
         "entity_category": None,
         "translation_key": "input_44",
     },
+    {
+        "name": "Liquid refrigerant temperature",
+        "address": 45,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "register_name": "input_45",
+        "entity_category": None,
+        "translation_key": "input_45",
+    },
     # Durchfluss
     {
         "name": "Flow rate",
