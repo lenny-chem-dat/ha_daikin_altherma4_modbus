@@ -1,0 +1,22 @@
+# Development requirements for Daikin Altherma 4 Modbus integration
+# Install with: pip install -r requirements-dev.txt
+
+# Home Assistant core (for IDE support and testing)
+homeassistant
+
+# Integration dependencies
+pymodbus>=3.8
+
+# Test requirements (from requirements-test.txt)
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+coverage>=7.0.0
+pytest-xdist>=3.0.0
+pytest-benchmark>=4.0.0
+ruff>=0.1.0
+bandit>=1.7.0
+safety>=2.3.0
+pytest-json-report>=1.5.0
+pytest-html>=4.1.0
