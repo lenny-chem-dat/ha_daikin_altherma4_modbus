@@ -132,9 +132,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         return self.async_show_form(
-            step_id="user", 
-            data_schema=data_schema, 
-            errors=errors, 
+            step_id="user",
+            data_schema=data_schema,
+            errors=errors,
             last_step=True,
             data_description={
                 CONF_HOST: "IP-Adresse oder Hostname der Daikin Wärmepumpe",
@@ -227,9 +227,9 @@ class OptionsFlow(config_entries.OptionsFlow):
         )
 
         return self.async_show_form(
-            step_id="init", 
-            data_schema=data_schema, 
-            errors=errors, 
+            step_id="init",
+            data_schema=data_schema,
+            errors=errors,
             last_step=True,
             data_description={
                 "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
