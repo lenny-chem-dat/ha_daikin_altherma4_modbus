@@ -66,6 +66,7 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
     """A Switch for Coil Register."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(
         self, coordinator, entry, address, register_name, translation_key=None
@@ -120,6 +121,7 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
     """A Switch for Holding Register."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(
         self,

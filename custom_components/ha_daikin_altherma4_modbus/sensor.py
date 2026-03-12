@@ -148,6 +148,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
     """A Sensor for Input-Register."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -315,6 +316,7 @@ class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Wärmepumpenleistung."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -352,6 +354,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Coefficient of Performance (CoP)."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -431,6 +434,7 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
     """Sensor für das letzte Auslösen eines Binärsensors."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -505,6 +509,7 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
     """Sensor für externen elektrischen Leistungssensor."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -576,6 +581,7 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
     """Calculated sensor for temperature difference (Delta-T)."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(
         self,

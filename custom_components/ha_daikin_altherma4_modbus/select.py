@@ -50,6 +50,7 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
     """Select entity for Daikin Altherma 4."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(
         self,

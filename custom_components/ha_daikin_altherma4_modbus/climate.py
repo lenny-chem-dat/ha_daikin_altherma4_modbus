@@ -71,6 +71,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     """Climate Entity for Daikin Altherma 4 Thermostat Control."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
@@ -379,6 +380,7 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
     """Climate Entity for DHW Heat-up (Manual or Booster)."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = True
 
     def __init__(self, coordinator, entry, dhw_type="manual"):
         super().__init__(coordinator)
