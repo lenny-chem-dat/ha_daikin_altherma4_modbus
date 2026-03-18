@@ -498,10 +498,46 @@ Use the built-in mock client for development and testing:
 
 ## Supported Devices
 
-- Daikin Altherma 4 (EPSX series)
-- Modbus TCP communication protocol
-- Tested with firmware versions 2.2.0
+This integration supports Daikin Altherma 4 heat pumps with Modbus TCP communication:
+
+### Compatible Models
+- **EPBX07A**
+- **EPBX10A**  
+- **EPBX14A**
+- **EPSX07P30A**
+- **EPSX07P50A**
+- **EPSX(B)10P30A**
+- **EPSX(B)10P50A**
+- **EPSX10P50AF**
+- **EPSX(B)14P30A**
+- **EPSX(B)14P50A**
+- **EPSXB07P30A**
+- **EPSXB07P50A**
+- **EPVX07S(U)18A**
+- **EPVX07S(U)23A**
+- **EPVX10S(U)18A**
+- **EPVX10S(U)23A**
+- **EPVX14S(U)18A**
+- **EPVX14S(U)23A**
+- **EPVZ07S18A**
+- **EPVZ07S23A**
+- **EPVZ10S18A**
+- **EPVZ10S23A**
+- **EPVZ14S18A**
+- **EPVZ14S23A**
+
+### Technical Requirements
+- **Modbus TCP communication protocol**
+- **MMI Version 2.2.0 or higher**
+- **Ethernet connection** (WiFi not supported)
+- **Port 502** (unencrypted) or **Port 802** (TLS encryption)
+
+### Features
 - Full register coverage for complete monitoring
+- All 112 input registers supported
+- Control functions via holding registers and coils
+- Comprehensive error monitoring and diagnostics
+- Multi-language support (English, German)
 
 ## Contributing
 
