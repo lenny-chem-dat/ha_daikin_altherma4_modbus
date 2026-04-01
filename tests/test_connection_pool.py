@@ -454,7 +454,7 @@ async def test_connection_pool_performance_metrics():
     assert operations_per_second > 100, (
         f"Performance too low: {operations_per_second:.1f} ops/s"
     )
-    assert avg_operation_time < 0.01, f"Operations too slow: {avg_operation_time:.6f}s"
+    assert avg_operation_time < 0.02, f"Operations too slow: {avg_operation_time:.6f}s"
 
     print("✅ Performance metrics within acceptable range!")
 

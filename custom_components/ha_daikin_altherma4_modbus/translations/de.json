@@ -211,6 +211,9 @@
           "warning": "Warnung"
         }
       },
+      "input_22": {
+        "name": "Code für die Unregelmäßigkeit bei nder Einheit"
+      },
       "input_23": {
         "name": "Untercode für die Unregelmäßigkeit bei der Einheit",
         "state": {
