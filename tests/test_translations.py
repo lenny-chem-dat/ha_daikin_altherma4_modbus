@@ -28,6 +28,26 @@ def get_translation_keys_from_json(filepath: Path) -> set:
     return keys
 
 
+def get_state_keys_from_json(filepath: Path) -> dict:
+    """Extract all state keys per entity from a JSON translation file.
+
+    Returns a dict of {entity_key: set_of_state_keys}.
+    """
+    with open(filepath, encoding="utf-8") as f:
+        data = json.load(f)
+
+    state_keys = {}
+    entity_section = data.get("entity", {})
+    for platform, entities in entity_section.items():
+        if isinstance(entities, dict):
+            for entity_key, entity_value in entities.items():
+                if isinstance(entity_value, dict) and "state" in entity_value:
+                    full_key = f"{platform}.{entity_key}"
+                    state_keys[full_key] = set(entity_value["state"].keys())
+
+    return state_keys
+
+
 def get_translation_keys_from_python(filepath: Path) -> set:
     """Extract all translation_key values from a Python file."""
     with open(filepath, encoding="utf-8") as f:
@@ -213,3 +233,32 @@ class TestTranslations:
             assert not missing_name, (
                 f"Missing 'name' field in {lang}.json: {sorted(missing_name)}"
             )
+
+    def test_state_consistency_between_languages(self, component_dir):
+        """Verify that state keys are consistent between en.json and de.json."""
+        en_states = get_state_keys_from_json(component_dir / "translations" / "en.json")
+        de_states = get_state_keys_from_json(component_dir / "translations" / "de.json")
+
+        # Find entities that have states in both languages
+        common_entities = set(en_states.keys()) & set(de_states.keys())
+
+        mismatches = []
+        for entity in sorted(common_entities):
+            en_entity_states = en_states[entity]
+            de_entity_states = de_states[entity]
+
+            en_only = en_entity_states - de_entity_states
+            de_only = de_entity_states - en_entity_states
+
+            if en_only or de_only:
+                msg_parts = [f"{entity}:"]
+                if en_only:
+                    msg_parts.append(f"  only in en: {sorted(en_only)}")
+                if de_only:
+                    msg_parts.append(f"  only in de: {sorted(de_only)}")
+                mismatches.append("\n".join(msg_parts))
+
+        assert not mismatches, (
+            "State key mismatches between en.json and de.json:\n"
+            + "\n\n".join(mismatches)
+        )
