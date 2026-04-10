@@ -5,6 +5,7 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  workflow_dispatch:
 
 # Add permissions for creating releases and coverage reporting
 permissions:
@@ -22,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 🔢 Extract version from manifest.json
       - name: Get manifest version
@@ -108,7 +109,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: coverage-report-${{ matrix.ha-version }}
@@ -118,7 +119,7 @@ jobs:
             .coverage
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: test-results-${{ matrix.ha-version }}
@@ -140,7 +141,7 @@ jobs:
           pytest --benchmark-only --benchmark-json=benchmark.json || true
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: benchmark-results-${{ matrix.ha-version }}
@@ -155,7 +156,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install dependencies
         run: |
@@ -171,7 +172,7 @@ jobs:
         run: pip-audit -r requirements-dev.txt -o audit-report.json || true
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: security-reports
@@ -182,13 +183,13 @@ jobs:
   # 📋 Test Summary
   test-summary:
     name: Test Summary
-    needs: [validate]
+    needs: [validate, dev-release, release]
     if: always()
     runs-on: ubuntu-latest
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
 
       - name: Create test summary
         run: |
@@ -208,6 +209,52 @@ jobs:
           echo "## 🔍 Security Analysis" >> $GITHUB_STEP_SUMMARY
           echo "Security reports are available for download." >> $GITHUB_STEP_SUMMARY
 
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Information" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]] && [[ ! "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "- Development release will be created as \`dev-<version>\`" >> $GITHUB_STEP_SUMMARY
+            echo "- Marked as prerelease on GitHub" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "- Stable release will be created from tag" >> $GITHUB_STEP_SUMMARY
+            echo "- Production-ready release" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- No release (Pull Request)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  dev-release:
+    name: Create Development Release
+    needs: [validate]
+    if: (github.ref == 'refs/heads/dev' && !startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Get version from manifest
+      - name: Get manifest version
+        id: manifest
+        run: |
+          VERSION=$(jq -r '.version' custom_components/ha_daikin_altherma4_modbus/manifest.json)
+          echo "manifest_version=$VERSION" >> $GITHUB_OUTPUT
+
+      # Create dev release tag and release
+      - name: Create Development Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Development Release ${{ steps.manifest.outputs.manifest_version }}"
+          tag_name: "dev-${{ steps.manifest.outputs.manifest_version }}"
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            ## Development Release ${{ steps.manifest.outputs.manifest_version }}
+            
+            This is an automatic development release from the dev branch.
+            
+            **Warning:** This is a development release and may contain unstable features.
+            
+            ### Changes
+            See the "Changes" section below for automatic commit summary.
+
   release:
     name: Create Release
     needs: [validate]
@@ -215,7 +262,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
