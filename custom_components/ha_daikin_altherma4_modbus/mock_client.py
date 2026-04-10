@@ -103,10 +103,8 @@ class MockModbusTcpClient(ModbusClientInterface):
         """Generate realistic demo data for all register types based on const.py."""
         import random
 
-        from .const import (
+        from .register_constants import (
             HOLDING_REGISTERS,
-            HOLDING_SELECT_REGISTERS,
-            HOLDING_SWITCHES,
             INPUT_REGISTERS,
         )
 
@@ -206,7 +204,7 @@ class MockModbusTcpClient(ModbusClientInterface):
                 elif address == 87:  # Room Cooling setpoint Upper limit
                     value = 3500  # 35.0°C
                 # Check if it's an enum register
-                elif register_def.enum_map:
+                elif getattr(register_def, "enum_map", None):
                     enum_keys = [
                         k for k in register_def.enum_map.keys() if isinstance(k, int)
                     ]
@@ -216,7 +214,7 @@ class MockModbusTcpClient(ModbusClientInterface):
                         value = 32766  # Default value
                 else:
                     # Generate value based on register definition
-                    scale = register_def.scale
+                    scale = getattr(register_def, "scale", 1)
                     min_val = (
                         register_def.min_value
                         if hasattr(register_def, "min_value")
@@ -239,16 +237,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         # Holding registers - only generate registers that are actually defined
         holding_registers = []
         max_address = (
-            max(
-                [
-                    reg.address
-                    for reg in HOLDING_REGISTERS
-                    + HOLDING_SWITCHES
-                    + HOLDING_SELECT_REGISTERS
-                ]
-            )
-            if (HOLDING_REGISTERS + HOLDING_SWITCHES + HOLDING_SELECT_REGISTERS)
-            else 0
+            max([reg.address for reg in HOLDING_REGISTERS]) if HOLDING_REGISTERS else 0
         )
 
         for i in range(max_address + 1):
@@ -256,14 +245,14 @@ class MockModbusTcpClient(ModbusClientInterface):
 
             # Find corresponding register definition
             register_def = None
-            for reg in HOLDING_REGISTERS + HOLDING_SWITCHES + HOLDING_SELECT_REGISTERS:
+            for reg in HOLDING_REGISTERS:
                 if reg.address == address:
                     register_def = reg
                     break
 
             if register_def:
                 # Check if it's an enum register (SELECT_REGISTERS)
-                if register_def.enum_map:
+                if getattr(register_def, "enum_map", None):
                     enum_keys = [
                         k for k in register_def.enum_map.keys() if isinstance(k, int)
                     ]
@@ -307,7 +296,7 @@ class MockModbusTcpClient(ModbusClientInterface):
                         value = 0
                 else:
                     # Generate value based on register definition
-                    scale = register_def.scale
+                    scale = getattr(register_def, "scale", 1)
                     min_val = (
                         register_def.min_value
                         if hasattr(register_def, "min_value")

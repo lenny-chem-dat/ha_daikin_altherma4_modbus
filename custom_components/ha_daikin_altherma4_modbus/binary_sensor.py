@@ -4,10 +4,10 @@ from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .common import get_coordinator_from_entry, get_register_value, is_entity_available
-from .const import (
+from .const import DOMAIN
+from .register_constants import (
     DISCRETE_INPUT_DEVICE_INFO,
     DISCRETE_INPUT_SENSORS,
-    DOMAIN,
     INPUT_DEVICE_INFO,
     INPUT_REGISTERS,
 )

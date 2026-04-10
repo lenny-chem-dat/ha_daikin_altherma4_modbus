@@ -11,7 +11,9 @@ from .common import (
     safe_write_register,
     to_unsigned_16bit,
 )
-from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS
+from .const import DOMAIN, HOLDING_DEVICE_INFO
+from .register_constants import HOLDING_REGISTERS
+from .register_types import NumberRegister
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,7 +28,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     entities = []
 
-    for item in HOLDING_REGISTERS:
+    holding_numbers = [
+        reg for reg in HOLDING_REGISTERS if isinstance(reg, NumberRegister)
+    ]
+    for item in holding_numbers:
         address = item.address
         min_v = item.min_value
         max_v = item.max_value

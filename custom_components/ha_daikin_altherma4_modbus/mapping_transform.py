@@ -4,13 +4,13 @@ import logging
 from typing import Dict, List
 
 from .common import get_register_value, update_value_if_changed
-from .const import CALCULATED_SENSORS
 from .data_types import (
     LastTriggeredData,
     ProcessedRegisterItem,
     StateData,
     StateMapping,
 )
+from .register_constants import CALCULATED_SENSORS
 from .register_types import RegisterDefinition
 
 _LOGGER = logging.getLogger(__name__)

@@ -16,41 +16,6 @@ NORMAL_SCAN_INTERVAL = 5
 MIN_MODBUS_ADDRESS = 1
 MAX_MODBUS_ADDRESS = 87
 
-INPUT_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "input_registers")},
-    "translation_key": "daikin_altherma_modbus_input_registers",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
-
-HOLDING_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "holding_registers")},
-    "translation_key": "daikin_altherma_modbus_holding_registers",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
-
-CALCULATED_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "calculated_sensors")},
-    "translation_key": "daikin_altherma_modbus_calculated_sensors",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
-
-DISCRETE_INPUT_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "discrete_input_registers")},
-    "translation_key": "daikin_altherma_modbus_discrete_input_registers",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
-
-COIL_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "coil_registers")},
-    "translation_key": "daikin_altherma_modbus_coil_registers",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
-
 # Register constants for Daikin Altherma 4
 REGISTER_OPERATION_MODE = "holding_3"  # Operation mode
 REGISTER_CURRENT_TEMP = (
@@ -93,15 +58,3 @@ HVAC_COOL = 2
 # DHW constants
 DHW_OFF = False
 DHW_ON = True
-
-# Import dataclass-based constants directly
-# These replace the old dictionary-based constants
-from .register_constants import (  # noqa: F401
-    CALCULATED_SENSORS,
-    COIL_REGISTERS,
-    DISCRETE_INPUT_SENSORS,
-    HOLDING_REGISTERS,
-    HOLDING_SELECT_REGISTERS,
-    HOLDING_SWITCHES,
-    INPUT_REGISTERS,
-)

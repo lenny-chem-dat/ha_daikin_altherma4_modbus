@@ -14,10 +14,10 @@ from .common import (
     to_signed_16bit,
 )
 from .config_entry_utils import entry_value
-from .const import (
+from .const import DOMAIN
+from .register_constants import (
     CALCULATED_DEVICE_INFO,
     CALCULATED_SENSORS,
-    DOMAIN,
     INPUT_DEVICE_INFO,
     INPUT_REGISTERS,
 )

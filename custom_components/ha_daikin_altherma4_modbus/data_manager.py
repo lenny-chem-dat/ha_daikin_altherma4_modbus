@@ -5,16 +5,14 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from .const import (
+from .data_types import StateData
+from .mapping_transform import ModbusMappingTransform
+from .register_constants import (
     COIL_REGISTERS,
     DISCRETE_INPUT_SENSORS,
     HOLDING_REGISTERS,
-    HOLDING_SELECT_REGISTERS,
-    HOLDING_SWITCHES,
     INPUT_REGISTERS,
 )
-from .data_types import StateData
-from .mapping_transform import ModbusMappingTransform
 from .register_repository import ModbusRegisterRepository
 from .transport_session import ModbusTransportSession
 
@@ -268,9 +266,7 @@ class ModbusDataManager:
         """Fetch all holding/select/switch registers in configured blocks."""
         start_time = time.time()
         data = {}
-        all_holding_registers = (
-            HOLDING_REGISTERS + HOLDING_SELECT_REGISTERS + HOLDING_SWITCHES
-        )
+        all_holding_registers = HOLDING_REGISTERS
 
         for (
             result,

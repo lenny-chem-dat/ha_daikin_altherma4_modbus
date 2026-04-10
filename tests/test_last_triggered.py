@@ -10,6 +10,7 @@ from .test_utils import (
     create_mock_coordinator,
     create_test_trigger_time,
     load_const_module,
+    load_register_constants_module,
     setup_home_assistant_mocks,
     setup_project_paths,
 )
@@ -18,6 +19,7 @@ from .test_utils import (
 setup_home_assistant_mocks()
 project_root = setup_project_paths()
 const_module = load_const_module(project_root)
+register_constants_module = load_register_constants_module(project_root)
 
 
 class TestLastTriggeredSensors:
@@ -39,7 +41,7 @@ class TestLastTriggeredSensors:
 
         found_sensors = {}
 
-        for sensor in const_module.CALCULATED_SENSORS:
+        for sensor in register_constants_module.CALCULATED_SENSORS:
             register_name = sensor.register_name
             if register_name in expected_sensors:
                 found_sensors[register_name] = sensor
@@ -80,7 +82,7 @@ class TestLastTriggeredSensors:
 
         for sensor_name, expected_trigger in expected_mappings.items():
             sensor_config = None
-            for sensor in const_module.CALCULATED_SENSORS:
+            for sensor in register_constants_module.CALCULATED_SENSORS:
                 if sensor.register_name == sensor_name:
                     sensor_config = sensor
                     break
@@ -252,7 +254,7 @@ class TestLastTriggeredSensors:
         }
 
         found_sensors = {}
-        for sensor in const_module.CALCULATED_SENSORS:
+        for sensor in register_constants_module.CALCULATED_SENSORS:
             register_name = sensor.register_name
             if register_name in expected_sensors:
                 found_sensors[register_name] = sensor
@@ -348,7 +350,7 @@ class TestLastTriggeredSensors:
 
             if is_on and not was_on:
                 # Find corresponding sensor
-                for sensor in const_module.CALCULATED_SENSORS:
+                for sensor in register_constants_module.CALCULATED_SENSORS:
                     if (
                         hasattr(sensor, "trigger_register_name")
                         and sensor.trigger_register_name == register_name

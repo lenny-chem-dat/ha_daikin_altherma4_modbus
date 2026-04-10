@@ -191,7 +191,7 @@ INPUT_REGISTERS = [
     ),
     # Betriebszustände
     SensorRegister(
-        name="Circulation pump running (Binary Status)",
+        name="Circulation pump running",
         address=30,
         input_type="input",
         register_name="input_30",
@@ -864,7 +864,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_74",
     ),
     NumberRegister(
-        name="Thermostat Request Additional",
+        name="Thermostat Request Add",
         address=75,
         input_type="holding",
         register_name="holding_75",
@@ -872,7 +872,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_75",
     ),
     NumberRegister(
-        name="Room Thermostat Heating Setpoint Main 2",
+        name="Room Thermostat control Heating Setpoint Main",
         address=76,
         input_type="holding",
         register_name="holding_76",
@@ -885,7 +885,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_76",
     ),
     NumberRegister(
-        name="Room Thermostat Cooling Setpoint Main 2",
+        name="Room Thermostat control Cooling Setpoint Main",
         address=77,
         input_type="holding",
         register_name="holding_77",
@@ -923,12 +923,9 @@ HOLDING_REGISTERS = [
         step=0.1,
         translation_key="holding_79",
     ),
-]
-
-# Holding Switches using dataclasses
-HOLDING_SWITCHES = [
+    # Holding Switches
     SwitchRegister(
-        name="Space heating/cooling - Select Entity",
+        name="Space heating/cooling ON/OFF",
         address=4,
         input_type="holding",
         register_name="holding_4",
@@ -936,7 +933,7 @@ HOLDING_SWITCHES = [
         translation_key="holding_4",
     ),
     SwitchRegister(
-        name="DHW booster mode (Powerful)",
+        name="DHW booster mode ON/OFF (Powerful)",
         address=13,
         input_type="holding",
         register_name="holding_13",
@@ -944,17 +941,14 @@ HOLDING_SWITCHES = [
         translation_key="holding_13",
     ),
     SwitchRegister(
-        name="Main zone ON/OFF",
+        name="DHW Single heat-up ON/OFF (Manual)",
         address=15,
         input_type="holding",
         register_name="holding_15",
         enum_map={0: "Off", 1: "On"},
         translation_key="holding_15",
     ),
-]
-
-# Select Registers using dataclasses
-HOLDING_SELECT_REGISTERS = [
+    # Holding Select Registers
     SelectRegister(
         name="Operation mode select",
         address=3,
@@ -1335,8 +1329,3 @@ CALCULATED_SENSORS = [
         translation_key="delta_t",
     ),
 ]
-
-# Register constants for backward compatibility
-REGISTER_OPERATION_MODE = "holding_3"
-REGISTER_CURRENT_TEMP = "input_40"
-REGISTER_OFFSET_HEATING = "holding_54"

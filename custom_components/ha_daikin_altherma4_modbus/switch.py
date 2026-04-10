@@ -7,13 +7,14 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .common import get_register_value, safe_write_register
-from .const import (
+from .const import DOMAIN
+from .register_constants import (
     COIL_DEVICE_INFO,
     COIL_REGISTERS,
-    DOMAIN,
     HOLDING_DEVICE_INFO,
-    HOLDING_SWITCHES,
+    HOLDING_REGISTERS,
 )
+from .register_types import SwitchRegister
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,8 +42,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         )
 
     # Holding Register Switches
-    _LOGGER.debug(f"Processing {len(HOLDING_SWITCHES)} holding switches")
-    for holding_switch in HOLDING_SWITCHES:
+    holding_switches = [
+        reg for reg in HOLDING_REGISTERS if isinstance(reg, SwitchRegister)
+    ]
+    _LOGGER.debug(f"Processing {len(holding_switches)} holding switches")
+    for holding_switch in holding_switches:
         _LOGGER.debug(
             f"Creating holding switch: {holding_switch.name} (address: {holding_switch.address}, register: {holding_switch.register_name})"
         )

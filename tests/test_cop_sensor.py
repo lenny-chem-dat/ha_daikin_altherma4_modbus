@@ -129,7 +129,7 @@ def _load_sensor_module(monkeypatch):
         register_types_name,
     )
 
-    # Create register_types module with SensorRegister class
+    # Create register_types module with all register classes
     register_types_module = types.ModuleType(register_types_name)
 
     class SensorRegister:
@@ -142,8 +142,26 @@ def _load_sensor_module(monkeypatch):
             for k, v in kwargs.items():
                 setattr(self, k, v)
 
+    class NumberRegister:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    class SelectRegister:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    class SwitchRegister:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
     register_types_module.SensorRegister = SensorRegister
     register_types_module.CalculatedRegister = CalculatedRegister
+    register_types_module.NumberRegister = NumberRegister
+    register_types_module.SelectRegister = SelectRegister
+    register_types_module.SwitchRegister = SwitchRegister
     monkeypatch.setitem(sys.modules, register_types_name, register_types_module)
 
     # Create const module

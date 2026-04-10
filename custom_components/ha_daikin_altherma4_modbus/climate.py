@@ -20,18 +20,15 @@ from .common import (
     to_unsigned_16bit,
 )
 from .const import (
-    CALCULATED_DEVICE_INFO,
     DHW_OFF,
     DHW_ON,
     DOMAIN,
     FAN_AUTO,
     FAN_MANUAL,
     FAN_OFF,
-    HOLDING_REGISTERS,
     HVAC_COOL,
     HVAC_HEAT,
     HVAC_OFF,
-    INPUT_REGISTERS,
     REGISTER_COMPRESSOR,
     REGISTER_CURRENT_TEMP,
     REGISTER_DHW_BOOSTER_HVAC_MODE,
@@ -46,6 +43,11 @@ from .const import (
     REGISTER_OFFSET_HEATING,
     REGISTER_OPERATION_MODE,
     REGISTER_QUIET_MODE,
+)
+from .register_constants import (
+    CALCULATED_DEVICE_INFO,
+    HOLDING_REGISTERS,
+    INPUT_REGISTERS,
 )
 
 _LOGGER = logging.getLogger(__name__)

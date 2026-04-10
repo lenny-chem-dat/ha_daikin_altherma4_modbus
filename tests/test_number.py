@@ -39,6 +39,8 @@ def _load_number_module(monkeypatch):
         module_name,
         const_name,
         common_name,
+        f"{package_name}.register_constants",
+        f"{package_name}.register_types",
         "homeassistant.components.number",
         "homeassistant.helpers.update_coordinator",
     )
@@ -80,8 +82,20 @@ def _load_number_module(monkeypatch):
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.HOLDING_DEVICE_INFO = {"name": "Test Device"}
 
-    # Create mock holding registers
-    class MockRegister:
+    monkeypatch.setitem(sys.modules, const_name, const_module)
+
+    # Mock register_types module with NumberRegister
+    register_types_name = f"{package_name}.register_types"
+    register_types_module = types.ModuleType(register_types_name)
+
+    class NumberRegister:
+        pass
+
+    register_types_module.NumberRegister = NumberRegister
+    monkeypatch.setitem(sys.modules, register_types_name, register_types_module)
+
+    # Create mock holding registers that are instances of NumberRegister
+    class MockRegister(NumberRegister):
         def __init__(self, **kwargs):
             for k, v in kwargs.items():
                 setattr(self, k, v)
@@ -112,7 +126,12 @@ def _load_number_module(monkeypatch):
             translation_key="mode_select",
         ),
     ]
-    monkeypatch.setitem(sys.modules, const_name, const_module)
+
+    # Mock register_constants module with HOLDING_REGISTERS
+    register_constants_name = f"{package_name}.register_constants"
+    register_constants_module = types.ModuleType(register_constants_name)
+    register_constants_module.HOLDING_REGISTERS = const_module.HOLDING_REGISTERS
+    monkeypatch.setitem(sys.modules, register_constants_name, register_constants_module)
 
     return importlib.import_module(module_name)
 

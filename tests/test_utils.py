@@ -105,6 +105,36 @@ def load_const_module(project_root):
         os.chdir(original_cwd)
 
 
+def load_register_constants_module(project_root):
+    """Load the register_constants module for testing."""
+    # Add the custom_components path to sys.path to allow imports
+    import os
+    import sys
+
+    custom_components_parent = str(project_root / "custom_components")
+    if custom_components_parent not in sys.path:
+        sys.path.insert(0, custom_components_parent)
+
+    # Change to the custom_components directory to make relative imports work
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(custom_components_parent)
+
+        # Import the module properly
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "ha_daikin_altherma4_modbus.register_constants",
+            "ha_daikin_altherma4_modbus/register_constants.py",
+        )
+        register_constants_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(register_constants_module)
+
+        return register_constants_module
+    finally:
+        os.chdir(original_cwd)
+
+
 def create_mock_coordinator():
     """Create a mock coordinator with test data."""
     coordinator = Mock()
