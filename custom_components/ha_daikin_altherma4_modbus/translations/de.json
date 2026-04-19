@@ -542,12 +542,6 @@
       "holding_2": {
         "name": "Vorlauf Haupt Kühlen-Sollwert"
       },
-      "holding_4": {
-        "name": "Raumheizen/-kühlen"
-      },
-      "holding_5": {
-        "name": "Brauchwasser Temperatur-Sollwert"
-      },
       "holding_6": {
         "name": "Raumthermostat-Steuerung Heizen-Sollwert Haupt"
       },
@@ -636,33 +630,12 @@
           "Cooling": "Kühlen"
         }
       },
-      "holding_4": {
-        "name": "Raumheizen/-kühlen",
-        "state": {
-          "OFF": "AUS",
-          "ON": "EIN"
-        }
-      },
       "holding_9": {
         "name": "Geräuscharmer Betrieb",
         "state": {
           "Off": "Aus",
           "On (Automatic)": "Ein (Automatisch)",
           "On (Manual)": "Ein (Manuell)"
-        }
-      },
-      "holding_13": {
-        "name": "Brauchwasser Zusatzheizungsmodus(leistungsstark)",
-        "state": {
-          "Off": "Aus",
-          "On (Powerful)": "Ein (Leistungsstark)"
-        }
-      },
-      "holding_15": {
-        "name": "Brauchwasser Einzelaufheizung(manuell)",
-        "state": {
-          "Off": "Aus",
-          "On": "Ein"
         }
       },
       "holding_56": {
