@@ -368,25 +368,24 @@ sensor.total_home_power
 |---------|---------------------------------------------------------|-------------|------|-------|------|
 | 1 | Leaving water Main Heating setpoint                     | Main heating setpoint | °C | 0.01 | int16 |
 | 2 | Leaving water Main Cooling setpoint                     | Main cooling setpoint | °C | 0.01 | int16 |
-| 3 | Operation mode                                          | System operation mode | - | 1 | uint16 |
+| 3 | Operation mode select                                   | System operation mode | - | 1 | uint16 |
 | 4 | Space heating/cooling ON/OFF                            | Space heating/cooling control | - | 1 | uint16 |
 | 6 | Room Thermostat Heating Setpoint Main                   | Room heating setpoint | °C | 0.01 | int16 |
 | 7 | Room Thermostat Cooling Setpoint Main                   | Room cooling setpoint | °C | 0.01 | int16 |
 | 9 | Quiet mode operation                                    | Quiet mode setting | - | 1 | uint16 |
 | 10 | DHW reheat setpoint                                     | DHW reheat temperature | °C | 0.01 | int16 |
 | 13 | DHW booster mode ON/OFF (Powerful)                      | DHW powerful mode | - | 1 | uint16 |
-| 14 | DHW boost setpoint ON/OFF (Powerful)                    | DHW boost temperature | °C | 0.01 | int16 |
+| 14 | DHW boost setpoint (Powerful)                           | DHW boost temperature | °C | 0.01 | int16 |
 | 15 | DHW Single heat-up ON/OFF (Manual)                      | Manual DHW heating | - | 1 | int16 |
 | 16 | DHW Single Heat-up Setpoint (Manual)                    | Manual DHW setpoint | °C | 0.01 | int16 |
-| 54 | Weather-dependent mode Main LWT Heating setpoint offset | Heating offset | °C | 0.01 | int16 |
-| 55 | Leaving water Main Heating setpoint Upper limit         | Main heat limit upper | °C | 1 | uint16 |
-| 56 | Leaving water Main Cooling setpoint Lower limit         | Main cool limit lower | °C | 1 | uint16 |
-| 57 | Leaving water Main Cooling setpoint Upper limit         | Main cool limit upper | °C | 1 | uint16 |
+| 54 | Weather-dependent mode Main LWT Heating setpoint offset | Heating offset | K | 0.01 | int16 |
+| 55 | Weather-dependent mode Main LWT Cooling setpoint offset | Cooling offset | K | 0.01 | int16 |
+| 56 | Smart Grid operation mode                             | Smart Grid mode | - | 1 | uint16 |
 | 58 | Imposed power limit                                     | Power limitation | kW | 0.001 | uint16 |
 | 63 | Leaving water Add Heating setpoint                      | Add heating setpoint | °C | 0.01 | int16 |
 | 64 | Leaving water Add Cooling setpoint                      | Add cooling setpoint | °C | 0.01 | int16 |
-| 66 | Weather-dependent mode Add LWT Heating setpoint offset  | Add heating offset | °C | 0.01 | int16 |
-| 67 | Weather-dependent mode Add LWT Cooling setpoint offset  | Add cooling offset | °C | 0.01 | int16 |
+| 66 | Weather-dependent mode Add LWT Heating setpoint offset  | Add heating offset | K | 0.01 | int16 |
+| 67 | Weather-dependent mode Add LWT Cooling setpoint offset  | Add cooling offset | K | 0.01 | int16 |
 | 68 | Weather-dependent mode Heating Main                     | Weather heating mode | - | 1 | uint16 |
 | 69 | Weather-dependent mode Cooling Main                     | Weather cooling mode | - | 1 | uint16 |
 | 74 | Thermostat Request Main                                 | Main thermostat request | - | 1 | uint16 |
