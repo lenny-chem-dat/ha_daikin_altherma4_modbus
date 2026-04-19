@@ -328,6 +328,10 @@ sensor.total_home_power
 | 51      | Heat pump power consumption            | Electrical power | W | 10 | uint16 |
 | 52      | DHW normal operation                   | DHW operation status | - | 1 | uint16 |
 | 53      | Space heating/cooling normal operation | Space operation | - | 1 | uint16 |
+| 54      | Leaving water Main Heating setpoint lower | Main heat limit lower | °C | 0.01 | int16 |
+| 55      | Leaving water Main Heating setpoint upper | Main heat limit upper | °C | 0.01 | int16 |
+| 56      | Leaving water Main Cooling setpoint lower | Main cool limit lower | °C | 0.01 | int16 |
+| 57      | Leaving water Main Cooling setpoint upper | Main cool limit upper | °C | 0.01 | int16 |
 | 58      | Leaving water Add Heating setpoint lower | Add heat limit lower | °C | 0.01 | int16 |
 | 59      | Leaving water Add Heating setpoint upper | Add heat limit upper | °C | 0.01 | int16 |
 | 60      | Leaving water Add Cooling setpoint lower | Add cool limit lower | °C | 0.01 | int16 |
