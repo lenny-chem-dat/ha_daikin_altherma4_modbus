@@ -7,7 +7,7 @@ from .common import get_coordinator_from_entry, get_register_value, is_entity_av
 from .const import DOMAIN
 from .register_constants import (
     DISCRETE_INPUT_DEVICE_INFO,
-    DISCRETE_INPUT_SENSORS,
+    DISCRETE_REGISTERS,
     INPUT_DEVICE_INFO,
     INPUT_REGISTERS,
 )
@@ -41,8 +41,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
             )
 
     # Discrete Input Sensors
-    _LOGGER.debug(f"Processing {len(DISCRETE_INPUT_SENSORS)} discrete input sensors")
-    for discrete in DISCRETE_INPUT_SENSORS:
+    _LOGGER.debug(f"Processing {len(DISCRETE_REGISTERS)} discrete input sensors")
+    for discrete in DISCRETE_REGISTERS:
         entities.append(
             DaikinDiscreteInputSensor(
                 coordinator=coordinator,

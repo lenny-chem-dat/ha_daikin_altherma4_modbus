@@ -9,7 +9,7 @@ from .data_types import StateData
 from .mapping_transform import ModbusMappingTransform
 from .register_constants import (
     COIL_REGISTERS,
-    DISCRETE_INPUT_SENSORS,
+    DISCRETE_REGISTERS,
     HOLDING_REGISTERS,
     INPUT_REGISTERS,
 )
@@ -241,7 +241,7 @@ class ModbusDataManager:
         if result is not None:
             data.update(
                 self._mapping.process_bit_sensors(
-                    result, DISCRETE_INPUT_SENSORS, "discrete_input"
+                    result, DISCRETE_REGISTERS, "discrete_input"
                 )
             )
 

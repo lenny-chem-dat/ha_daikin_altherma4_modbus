@@ -994,7 +994,7 @@ HOLDING_REGISTERS = [
 ]
 
 # Discrete Input Sensors using dataclasses
-DISCRETE_INPUT_SENSORS = [
+DISCRETE_REGISTERS = [
     SensorRegister(
         name="Shut-off valve",
         address=1,

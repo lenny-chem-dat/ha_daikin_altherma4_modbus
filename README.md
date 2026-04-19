@@ -304,29 +304,29 @@ sensor.total_home_power
 
 ### Input Registers (21-87)
 
-| Address | Name | Description | Unit | Scale | Type |
-|---------|------|-------------|------|-------|------|
-| 21      | Unit abnormality | Error status | - | 1 | int16 |
-| 22      | Unit abnormality code | Specific error code | - | 1 | string |
-| 23      | Unit abnormality sub code | Error sub-code | - | 1 | uint16 |
-| 30      | Circulation pump running | Pump status | - | 1 | uint16 |
-| 31      | Compressor run | Compressor status | - | 1 | uint16 |
-| 32      | Booster heater run | Auxiliary heating | - | 1 | uint16 |
-| 33      | Disinfection operation | Disinfection status | - | 1 | uint16 |
-| 35      | Defrost/Restart | Defrost cycle status | - | 1 | uint16 |
-| 36      | Hot start | Hot start status | - | 1 | uint16 |
-| 37      | 3-way valve | Valve position | - | 1 | uint16 |
-| 38      | Operation mode | Current operation mode | - | 1 | uint16 |
-| 40      | Leaving water temperature PHE | Primary heat exchanger | °C | 0.01 | int16 |
-| 41      | Leaving water temperature BUH | Backup heater | °C | 0.01 | int16 |
-| 42      | Return water temperature | Return flow | °C | 0.01 | int16 |
-| 43      | Domestic Hot Water temperature | Domestic hot water | °C | 0.01 | int16 |
-| 44      | Outside air temperature | Ambient temperature | °C | 0.01 | int16 |
-| 45      | Liquid refrigerant temperature | Refrigerant temp | °C | 0.01 | int16 |
-| 49      | Flow rate | Water flow rate | L/min | 0.01 | uint16 |
+| Address | Name                                   | Description | Unit | Scale | Type |
+|---------|----------------------------------------|-------------|------|-------|------|
+| 21      | Unit abnormality                       | Error status | - | 1 | int16 |
+| 22      | Unit abnormality code                  | Specific error code | - | 1 | string |
+| 23      | Unit abnormality sub code              | Error sub-code | - | 1 | uint16 |
+| 30      | Circulation pump running               | Pump status | - | 1 | uint16 |
+| 31      | Compressor run                         | Compressor status | - | 1 | uint16 |
+| 32      | Booster heater run                     | Auxiliary heating | - | 1 | uint16 |
+| 33      | Disinfection operation                 | Disinfection status | - | 1 | uint16 |
+| 35      | Defrost/Restart                        | Defrost cycle status | - | 1 | uint16 |
+| 36      | Hot start                              | Hot start status | - | 1 | uint16 |
+| 37      | 3-way valve                            | Valve position | - | 1 | uint16 |
+| 38      | Operation mode                         | Current operation mode | - | 1 | uint16 |
+| 40      | Leaving water temperature PHE          | Primary heat exchanger | °C | 0.01 | int16 |
+| 41      | Leaving water temperature BUH          | Backup heater | °C | 0.01 | int16 |
+| 42      | Return water temperature               | Return flow | °C | 0.01 | int16 |
+| 43      | Domestic Hot Water temperature         | Domestic hot water | °C | 0.01 | int16 |
+| 44      | Outside air temperature                | Ambient temperature | °C | 0.01 | int16 |
+| 45      | Liquid refrigerant temperature         | Refrigerant temp | °C | 0.01 | int16 |
+| 49      | Flow rate                              | Water flow rate | L/min | 0.01 | uint16 |
 | 50      | Remote control room temperature (Main) | Main zone temp | °C | 0.01 | int16 |
-| 51      | Heat pump power consumption | Electrical power | W | 10 | uint16 |
-| 52      | DHW normal operation | DHW operation status | - | 1 | uint16 |
+| 51      | Heat pump power consumption            | Electrical power | W | 10 | uint16 |
+| 52      | DHW normal operation                   | DHW operation status | - | 1 | uint16 |
 | 53      | Space heating/cooling normal operation | Space operation | - | 1 | uint16 |
 | 58      | Leaving water Add Heating setpoint lower | Add heat limit lower | °C | 0.01 | int16 |
 | 59      | Leaving water Add Heating setpoint upper | Add heat limit upper | °C | 0.01 | int16 |
@@ -375,8 +375,9 @@ sensor.total_home_power
 | 15 | DHW Single heat-up ON/OFF (Manual)                      | Manual DHW heating | - | 1 | int16 |
 | 16 | DHW Single Heat-up Setpoint (Manual)                    | Manual DHW setpoint | °C | 0.01 | int16 |
 | 54 | Weather-dependent mode Main LWT Heating setpoint offset | Heating offset | °C | 0.01 | int16 |
-| 55 | Weather-dependent mode Main LWT Cooling setpoint offset | Cooling offset | °C | 0.01 | int16 |
-| 56 | Smart Grid Operation Mode                               | Smart grid mode | - | 1 | uint16 |
+| 55 | Leaving water Main Heating setpoint Upper limit         | Main heat limit upper | °C | 1 | uint16 |
+| 56 | Leaving water Main Cooling setpoint Lower limit         | Main cool limit lower | °C | 1 | uint16 |
+| 57 | Leaving water Main Cooling setpoint Upper limit         | Main cool limit upper | °C | 1 | uint16 |
 | 58 | Imposed power limit                                     | Power limitation | kW | 0.001 | uint16 |
 | 63 | Leaving water Add Heating setpoint                      | Add heating setpoint | °C | 0.01 | int16 |
 | 64 | Leaving water Add Cooling setpoint                      | Add cooling setpoint | °C | 0.01 | int16 |
