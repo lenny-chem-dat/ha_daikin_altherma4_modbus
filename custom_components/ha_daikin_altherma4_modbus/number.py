@@ -11,8 +11,8 @@ from .common import (
     safe_write_register,
     to_unsigned_16bit,
 )
-from .const import DOMAIN, HOLDING_DEVICE_INFO
-from .register_constants import HOLDING_REGISTERS
+from .const import DOMAIN
+from .register_constants import HOLDING_DEVICE_INFO, HOLDING_REGISTERS
 from .register_types import NumberRegister
 
 _LOGGER = logging.getLogger(__name__)

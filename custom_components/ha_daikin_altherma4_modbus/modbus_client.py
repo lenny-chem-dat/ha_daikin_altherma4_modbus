@@ -47,6 +47,11 @@ class OneBasedModbusResponse:
             # Place returned registers at the correct positions
             for i, value in enumerate(self.original_response.registers):
                 result[self.start_address + i] = value
+                # Log unavailable values (32765 or 32766) at debug level
+                if value in [32765, 32766]:
+                    _LOGGER.debug(
+                        f"Modbus client returned unavailable value {value} at address {self.start_address + i}"
+                    )
 
             _LOGGER.debug(
                 f"OneBasedModbusResponse: start_address={self.start_address}, len={len(self.original_response.registers)}, result_len={len(result)}"

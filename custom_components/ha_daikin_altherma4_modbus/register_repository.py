@@ -159,27 +159,24 @@ class ModbusRegisterRepository:
 
         data_blocks: list[tuple[Any, int, int, int]] = []
 
-        # 🚀 OPTIMIZED: Single batch read for all holding registers (1-79)
-        # Before: 3 separate reads (1-25, 26-50, 51-80) + 200ms delays
-        # After: 1 single read (1-79) = 66% faster + no delays!
         try:
             block_start = time.time()
             result = await client.read_holding_registers(
-                1, 79
-            )  # 79 Register in einem Aufruf!
+                1, 80
+            )  # 80 Register in einem Aufruf!
             _LOGGER.debug(
-                "Optimized Holding Register Block (1-79) read in %.3fs",
+                "Optimized Holding Register Block (1-80) read in %.3fs",
                 time.time() - block_start,
             )
 
             if not self._session.is_modbus_error(result):
-                data_blocks.append((result, 1, 79, 1))
+                data_blocks.append((result, 1, 80, 1))
                 _LOGGER.debug(
-                    "✅ Batch optimization successful: 79 registers in 1 read"
+                    "✅ Batch optimization successful: 80 registers in 1 read"
                 )
             else:
                 _LOGGER.warning(
-                    "Device does not support full holding register range (1-79)"
+                    "Device does not support full holding register range (1-80)"
                 )
                 # Fallback: Try individual blocks if full range fails
                 await self._fallback_holding_blocks(data_blocks)

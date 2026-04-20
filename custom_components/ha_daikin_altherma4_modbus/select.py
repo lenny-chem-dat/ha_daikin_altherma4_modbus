@@ -10,11 +10,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .common import (
     get_coordinator_from_entry,
     get_register_value,
-    is_entity_available,
     safe_write_register,
 )
-from .const import DOMAIN, HOLDING_DEVICE_INFO
-from .register_constants import HOLDING_REGISTERS
+from .const import DOMAIN
+from .register_constants import HOLDING_DEVICE_INFO, HOLDING_REGISTERS
 from .register_types import SelectRegister
 
 _LOGGER = logging.getLogger(__name__)
@@ -85,8 +84,25 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
 
     @property
     def available(self) -> bool:
-        """Return True if entity is available."""
-        return is_entity_available(self.coordinator.data, self._register_name)
+        """Return True if entity is available.
+
+        For select entities, a value is available if it exists in the coordinator data
+        and is present in the enum_map, even if it's 32765 or 32766 (which are normally
+        used as unavailable markers for other register types).
+        """
+        data = self.coordinator.data.get(self._register_name)
+        if data is None:
+            return False
+        val = get_register_value(data)
+        if val is None:
+            return False
+        try:
+            int_val = int(val)
+        except (ValueError, TypeError):
+            return False
+        # For select entities, values in enum_map are always available
+        # even if they are 32765 or 32766 (e.g., DHW mode "Off" = 32766)
+        return int_val in self._enum_map or int_val not in [32765, 32766]
 
     @property
     def current_option(self):
@@ -101,10 +117,8 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
             except (ValueError, TypeError):
                 return None
 
-            # Return None for unavailable value (32765 or 32766)
-            if val == 32765 or val == 32766:
-                return None
-
+            # For select entities, values in enum_map are valid options
+            # even if they are 32765 or 32766 (e.g., DHW mode "Off" = 32766)
             if val is not None and val in self._enum_map:
                 option = self._enum_map[val]
                 return option

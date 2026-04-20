@@ -908,7 +908,7 @@ HOLDING_REGISTERS = [
         step=0.1,
         translation_key="holding_67",
     ),
-    NumberRegister(
+    SelectRegister(
         name="Weather-dependent mode Heating Main",
         address=68,
         input_type="holding",
@@ -916,7 +916,7 @@ HOLDING_REGISTERS = [
         enum_map={0: "Fixed", 1: "Weather dependent"},
         translation_key="holding_68",
     ),
-    NumberRegister(
+    SelectRegister(
         name="Weather-dependent mode Cooling Main",
         address=69,
         input_type="holding",
@@ -924,7 +924,7 @@ HOLDING_REGISTERS = [
         enum_map={0: "Fixed", 1: "Weather dependent"},
         translation_key="holding_69",
     ),
-    NumberRegister(
+    SelectRegister(
         name="Thermostat Request Main",
         address=74,
         input_type="holding",
@@ -932,7 +932,7 @@ HOLDING_REGISTERS = [
         enum_map={0: "None", 1: "Heating", 2: "Cooling"},
         translation_key="holding_74",
     ),
-    NumberRegister(
+    SelectRegister(
         name="Thermostat Request Add",
         address=75,
         input_type="holding",

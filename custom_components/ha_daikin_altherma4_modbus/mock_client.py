@@ -253,14 +253,17 @@ class MockModbusTcpClient(ModbusClientInterface):
             if register_def:
                 # Check if it's an enum register (SELECT_REGISTERS)
                 if getattr(register_def, "enum_map", None):
+                    # Filter out unavailable values (32765, 32766) from enum selection
                     enum_keys = [
-                        k for k in register_def.enum_map.keys() if isinstance(k, int)
+                        k
+                        for k in register_def.enum_map.keys()
+                        if isinstance(k, int) and k not in [32765, 32766]
                     ]
                     if enum_keys:
                         value = random.choice(enum_keys)
                     else:
                         value = 0  # Default value
-                elif register_def.name in [
+                elif register_def and register_def.name in [
                     "Operation mode",
                     "Space heating/cooling",
                     "DHW mode setting",
@@ -278,7 +281,7 @@ class MockModbusTcpClient(ModbusClientInterface):
                         )  # Reheat, Schedule and reheat, Scheduled
                     else:
                         value = 0
-                elif register_def.name in [
+                elif register_def and register_def.name in [
                     "Holiday mode",
                     "Smart Grid Operation Mode",
                     "Weather-dependent mode",

@@ -131,6 +131,7 @@ def _load_number_module(monkeypatch):
     register_constants_name = f"{package_name}.register_constants"
     register_constants_module = types.ModuleType(register_constants_name)
     register_constants_module.HOLDING_REGISTERS = const_module.HOLDING_REGISTERS
+    register_constants_module.HOLDING_DEVICE_INFO = const_module.HOLDING_DEVICE_INFO
     monkeypatch.setitem(sys.modules, register_constants_name, register_constants_module)
 
     return importlib.import_module(module_name)

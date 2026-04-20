@@ -548,18 +548,6 @@
       "holding_67": {
         "name": "Weather-dependent mode additional LWT cooling setpoint offset"
       },
-      "holding_68": {
-        "name": "Weather-dependent mode heating main"
-      },
-      "holding_69": {
-        "name": "Weather-dependent mode cooling main"
-      },
-      "holding_74": {
-        "name": "Thermostat request main"
-      },
-      "holding_75": {
-        "name": "Thermostat request additional"
-      },
       "holding_76": {
         "name": "Room thermostat control heating setpoint main"
       },
@@ -582,6 +570,18 @@
       },
       "holding_56": {
         "name": "Smart grid operation mode"
+      },
+      "holding_68": {
+        "name": "Weather-dependent mode heating main"
+      },
+      "holding_69": {
+        "name": "Weather-dependent mode cooling main"
+      },
+      "holding_74": {
+        "name": "Thermostat request main"
+      },
+      "holding_75": {
+        "name": "Thermostat request additional"
       },
       "holding_80": {
         "name": "DHW mode setting"

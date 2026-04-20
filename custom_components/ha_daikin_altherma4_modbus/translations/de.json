@@ -578,36 +578,6 @@
       "holding_67": {
         "name": "Witterungsgeführter Modus Zusatz VLT-KühlenSollwertverschiebung"
       },
-      "holding_68": {
-        "name": "Witterungsgeführter Modus Heizen Haupt",
-        "state": {
-          "Fixed": "Fest",
-          "Weather dependent": "Wetterabhängig"
-        }
-      },
-      "holding_69": {
-        "name": "Witterungsgeführter Modus Kühlen Haupt",
-        "state": {
-          "Fixed": "Fest",
-          "Weather dependent": "Wetterabhängig"
-        }
-      },
-      "holding_74": {
-        "name": "Thermostat Anforderung Haupt",
-        "state": {
-          "None": "Keine",
-          "Heating": "Heizen",
-          "Cooling": "Kühlen"
-        }
-      },
-      "holding_75": {
-        "name": "Thermostat Anforderung Zusatz",
-        "state": {
-          "None": "Keine",
-          "Heating": "Heizen",
-          "Cooling": "Kühlen"
-        }
-      },
       "holding_76": {
         "name": "Raumthermostat-Steuerung Heizen-Sollwert Haupt"
       },
@@ -645,6 +615,36 @@
           "Forced off": " Zwangsabschaltung",
           "Recommended on": "Empfehlung ein",
           "Forced on": "Erzwungen ein"
+        }
+      },
+      "holding_68": {
+        "name": "Witterungsgeführter Modus Heizen Haupt",
+        "state": {
+          "Fixed": "Fest",
+          "Weather dependent": "Wetterabhängig"
+        }
+      },
+      "holding_69": {
+        "name": "Witterungsgeführter Modus Kühlen Haupt",
+        "state": {
+          "Fixed": "Fest",
+          "Weather dependent": "Wetterabhängig"
+        }
+      },
+      "holding_74": {
+        "name": "Thermostat Anforderung Haupt",
+        "state": {
+          "None": "Keine",
+          "Heating": "Heizen",
+          "Cooling": "Kühlen"
+        }
+      },
+      "holding_75": {
+        "name": "Thermostat Anforderung Zusatz",
+        "state": {
+          "None": "Keine",
+          "Heating": "Heizen",
+          "Cooling": "Kühlen"
         }
       },
       "holding_80": {
