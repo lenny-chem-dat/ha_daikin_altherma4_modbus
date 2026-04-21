@@ -44,6 +44,12 @@ REGISTER_DHW_BOOSTER_SETPOINT = "holding_14"  # DHW Single heat-up setpoint (Man
 REGISTER_DHW_BOOSTER_RUNNING = "discrete_19"  # DHW running status
 REGISTER_DHW_BOOSTER_TEMP = "input_43"  # DHW temperature
 
+# Register constants for thermal heat output calculation
+REGISTER_FLOW_RATE = "input_49"  # Flow rate in L/min
+REGISTER_LEAVING_WATER_TEMP = "input_40"  # Leaving water temperature PHE
+REGISTER_RETURN_WATER_TEMP = "input_42"  # Return water temperature
+REGISTER_HEAT_PUMP_POWER = "input_51"  # Heat pump power consumption
+
 # Fan mode constants (quiet mode)
 FAN_OFF = "OFF"
 FAN_AUTO = "Auto"

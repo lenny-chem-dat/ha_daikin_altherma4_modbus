@@ -169,6 +169,10 @@ def _load_sensor_module(monkeypatch):
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.INPUT_DEVICE_INFO = {}
     const_module.CALCULATED_DEVICE_INFO = {}
+    const_module.REGISTER_FLOW_RATE = "input_49"
+    const_module.REGISTER_LEAVING_WATER_TEMP = "input_40"
+    const_module.REGISTER_RETURN_WATER_TEMP = "input_42"
+    const_module.REGISTER_HEAT_PUMP_POWER = "input_51"
     const_module.INPUT_REGISTERS = [
         SensorRegister(
             name="Flow rate",
@@ -281,9 +285,9 @@ def test_cop_sensor_with_external_power_sensor(monkeypatch):
     coordinator = SimpleNamespace(
         hass=hass,
         data={
-            "input_49": {"value": 1000},  # Flow raw = 1000, scaled = 10 L/min
-            "input_40": {"value": 4500},  # Temp raw = 4500, scaled = 45°C
-            "input_42": {"value": 4000},  # Temp raw = 4000, scaled = 40°C
+            "input_49": {"value": 10.0},  # Flow = 10 L/min (already scaled)
+            "input_40": {"value": 45.0},  # Temp = 45°C (already scaled)
+            "input_42": {"value": 40.0},  # Temp = 40°C (already scaled)
         },
     )
 
@@ -312,10 +316,10 @@ def test_cop_sensor_with_modbus_power_data(monkeypatch):
     coordinator = SimpleNamespace(
         hass=hass,
         data={
-            "input_49": {"value": 1000},  # Flow raw = 1000, scaled = 10 L/min
-            "input_40": {"value": 4500},  # Temp raw = 4500, scaled = 45°C
-            "input_42": {"value": 4000},  # Temp raw = 4000, scaled = 40°C
-            "input_51": {"value": 100},  # Power raw = 100, scaled = 1000W
+            "input_49": {"value": 10.0},  # Flow = 10 L/min (already scaled)
+            "input_40": {"value": 45.0},  # Temp = 45°C (already scaled)
+            "input_42": {"value": 40.0},  # Temp = 40°C (already scaled)
+            "input_51": {"value": 1000.0},  # Power = 1000W (already scaled)
         },
     )
 
@@ -347,13 +351,13 @@ def test_cop_sensor_returns_none_when_heat_power_is_zero(monkeypatch):
         hass=hass,
         data={
             "input_49": {
-                "value": 0,
+                "value": 0.0,
             },  # Flow = 0 L/min
             "input_40": {
-                "value": 4500,
+                "value": 45.0,
             },  # Vorlauf = 45°C
             "input_42": {
-                "value": 4500,
+                "value": 45.0,
             },  # Rücklauf = 45°C, delta_T = 0
         },
     )
@@ -387,13 +391,13 @@ def test_cop_sensor_returns_none_when_electric_power_is_zero(monkeypatch):
         hass=hass,
         data={
             "input_49": {
-                "value": 1000,
+                "value": 10.0,
             },  # Flow = 10 L/min
             "input_40": {
-                "value": 4500,
+                "value": 45.0,
             },  # Vorlauf = 45°C
             "input_42": {
-                "value": 4000,
+                "value": 40.0,
             },  # Rücklauf = 40°C
         },
     )
@@ -429,13 +433,13 @@ def test_cop_sensor_returns_none_when_external_sensor_unavailable(monkeypatch):
         hass=hass,
         data={
             "input_49": {
-                "value": 1000,
+                "value": 10.0,
             },
             "input_40": {
-                "value": 4500,
+                "value": 45.0,
             },
             "input_42": {
-                "value": 4000,
+                "value": 40.0,
             },
         },
     )
@@ -463,10 +467,18 @@ def test_cop_sensor_with_unscaled_modbus_data(monkeypatch):
     coordinator = SimpleNamespace(
         hass=hass,
         data={
-            "input_49": {"value": 1000},  # No scale stored
-            "input_40": {"value": 4500},  # No scale stored
-            "input_42": {"value": 4000},  # No scale stored
-            "input_51": {"value": 100},  # No scale stored, should use default 10
+            "input_49": {
+                "value": 10.0
+            },  # No scale stored in data, but value is already scaled
+            "input_40": {
+                "value": 45.0
+            },  # No scale stored in data, but value is already scaled
+            "input_42": {
+                "value": 40.0
+            },  # No scale stored in data, but value is already scaled
+            "input_51": {
+                "value": 1000.0
+            },  # No scale stored in data, but value is already scaled
         },
     )
 
@@ -502,13 +514,13 @@ def test_cop_sensor_rounds_to_two_decimals(monkeypatch):
         hass=hass,
         data={
             "input_49": {
-                "value": 1000,
+                "value": 10.0,
             },
             "input_40": {
-                "value": 4500,
+                "value": 45.0,
             },
             "input_42": {
-                "value": 4000,
+                "value": 40.0,
             },
         },
     )
@@ -543,13 +555,13 @@ def test_cop_sensor_with_legacy_entry_data(monkeypatch):
         hass=hass,
         data={
             "input_49": {
-                "value": 1000,
+                "value": 10.0,
             },
             "input_40": {
-                "value": 4500,
+                "value": 45.0,
             },
             "input_42": {
-                "value": 4000,
+                "value": 40.0,
             },
         },
     )

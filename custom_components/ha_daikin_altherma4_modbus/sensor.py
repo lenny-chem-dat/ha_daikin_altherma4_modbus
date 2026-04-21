@@ -7,7 +7,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .common import (
-    get_register_scale,
     get_register_value,
     is_entity_available,
     is_unavailable_value,
@@ -212,17 +211,12 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         if self._dtype == "string":
             return str(val) if val is not None else None
 
-        # Check if value is already scaled by checking if scale is stored in data
-        data_scale = get_register_scale(data)
-
         # Convert to appropriate type based on sensor characteristics
         try:
             # For scaled sensors, keep as float to preserve decimal places
-            if self._scale != 1 or (data_scale is not None and data_scale != 1):
-                # This is a scaled sensor - convert to float
+            if self._scale != 1:
                 val = float(val)
             else:
-                # This is not a scaled sensor - convert to int
                 val = int(val)
         except (ValueError, TypeError):
             return None
@@ -246,53 +240,38 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
                 )
                 return "Unknown"
 
-        if data_scale is not None:
-            # Value is already scaled by data_manager
-            scaled_value = val
-        else:
-            # Value is not scaled yet, apply scaling
-            scaled_value = val * self._scale
-
+        # Value is already scaled by data_manager
         # Auf 2 Nachkommastellen runden bei °C Sensoren
         if self._attr_native_unit_of_measurement == "°C":
-            final_value = round(scaled_value, 2)
-            return final_value
+            return round(val, 2)
 
-        return scaled_value
+        return val
 
 
 def calculate_thermal_heat_output(coordinator):
     """Berechnet die thermische Leistung in W."""
-    # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren
-    flow_data = coordinator.data.get("input_49", {})
-    flow_raw = get_register_value(flow_data) or 0  # Flow rate (roh)
-    temp_vl_data = coordinator.data.get("input_40", {})
+    from .const import (
+        REGISTER_FLOW_RATE,
+        REGISTER_LEAVING_WATER_TEMP,
+        REGISTER_RETURN_WATER_TEMP,
+    )
+
+    # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren (bereits skaliert)
+    flow_data = coordinator.data.get(REGISTER_FLOW_RATE, {})
+    flow_raw = get_register_value(flow_data) or 0  # Flow rate in L/min
+    temp_vl_data = coordinator.data.get(REGISTER_LEAVING_WATER_TEMP, {})
     temp_vl_raw = (
         get_register_value(temp_vl_data) or 0
-    )  # Leaving water temperature PHE (roh)
-    temp_rl_data = coordinator.data.get("input_42", {})
+    )  # Leaving water temperature PHE in °C
+    temp_rl_data = coordinator.data.get(REGISTER_RETURN_WATER_TEMP, {})
     temp_rl_raw = (
         get_register_value(temp_rl_data) or 0
-    )  # Return water temperature (roh)
+    )  # Return water temperature in °C
 
-    # Check if values are already scaled by checking if scale is stored in data
-    flow_scale = get_register_scale(flow_data)
-    if flow_scale is not None:
-        flow = flow_raw  # Already scaled by data_manager
-    else:
-        flow = flow_raw * 0.01  # L/min (korrekte Skalierung)
-
-    temp_vl_scale = get_register_scale(temp_vl_data)
-    if temp_vl_scale is not None:
-        temp_vl = temp_vl_raw  # Already scaled by data_manager
-    else:
-        temp_vl = temp_vl_raw * 0.01  # °C (korrekte Skalierung)
-
-    temp_rl_scale = get_register_scale(temp_rl_data)
-    if temp_rl_scale is not None:
-        temp_rl = temp_rl_raw  # Already scaled by data_manager
-    else:
-        temp_rl = temp_rl_raw * 0.01  # °C (korrekte Skalierung)
+    # Values from coordinator are already scaled by data_manager
+    flow = flow_raw  # L/min
+    temp_vl = temp_vl_raw  # °C
+    temp_rl = temp_rl_raw  # °C
 
     delta_t = temp_vl - temp_rl
     thermal_heat_output = flow * delta_t * 70  # Berechnung thermische Leistung in W
@@ -392,30 +371,11 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
             electric_power = None
 
         if electric_power is None:
-            # Modbus
-            power_data = self.coordinator.data.get("input_51", {})
-            electric_power_raw = get_register_value(power_data) or 0
+            # Modbus - value is already scaled by data_manager
+            from .const import REGISTER_HEAT_PUMP_POWER
 
-            # Check if value is already scaled by checking if scale is stored in data
-            data_scale = get_register_scale(power_data)
-
-            if data_scale is not None:
-                # Value is already scaled by data_manager
-                electric_power = electric_power_raw
-            else:
-                # Value is not scaled yet, apply scaling from register definition
-                # input_51 (Heat pump power consumption) has scale=10
-                from .const import INPUT_REGISTERS
-
-                power_register = next(
-                    (r for r in INPUT_REGISTERS if r.register_name == "input_51"), None
-                )
-                default_scale = (
-                    getattr(power_register, "scale", 10) if power_register else 10
-                )
-                electric_power = electric_power_raw * (
-                    get_register_scale(power_data) or default_scale
-                )  # in W
+            power_data = self.coordinator.data.get(REGISTER_HEAT_PUMP_POWER, {})
+            electric_power = get_register_value(power_data) or 0  # in W
 
         if electric_power and electric_power > 0 and heat_power > 0:
             # Beide Leistungen in W, direkte Berechnung
@@ -604,27 +564,20 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Calculate the temperature difference between flow and return."""
-        # Vorlauftemperatur (Leaving water temperature PHE)
-        flow_temp_data = self.coordinator.data.get("input_40", {})
-        flow_temp_raw = get_register_value(flow_temp_data) or 0
+        from .const import (
+            REGISTER_LEAVING_WATER_TEMP,
+            REGISTER_RETURN_WATER_TEMP,
+        )
 
-        # Rücklauftemperatur (Return water temperature)
-        return_temp_data = self.coordinator.data.get("input_42", {})
-        return_temp_raw = get_register_value(return_temp_data) or 0
+        # Vorlauftemperatur (Leaving water temperature PHE) - already scaled
+        flow_temp_data = self.coordinator.data.get(REGISTER_LEAVING_WATER_TEMP, {})
+        flow_temp = get_register_value(flow_temp_data) or 0  # °C
 
-        # Check if values are already scaled by checking if scale is stored in data
-        flow_scale = get_register_scale(flow_temp_data)
-        if flow_scale is not None:
-            flow_temp = flow_temp_raw  # Already scaled by data_manager
-        else:
-            flow_temp = flow_temp_raw * 0.01  # °C (korrekte Skalierung)
-
-        return_scale = get_register_scale(return_temp_data)
-        if return_scale is not None:
-            return_temp = return_temp_raw  # Already scaled by data_manager
-        else:
-            return_temp = return_temp_raw * 0.01  # °C (korrekte Skalierung)
+        # Rücklauftemperatur (Return water temperature) - already scaled
+        return_temp_data = self.coordinator.data.get(REGISTER_RETURN_WATER_TEMP, {})
+        return_temp = get_register_value(return_temp_data) or 0  # °C
 
         # Delta-T berechnen und auf 2 Nachkommastellen runden
+        _LOGGER.debug(f"Delta-T: {flow_temp} - {return_temp}")
         delta_t = flow_temp - return_temp
         return round(delta_t, 2)
