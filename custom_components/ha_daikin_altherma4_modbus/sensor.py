@@ -192,7 +192,9 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
             # Clear unit of measurement for enum sensors (they are not numeric)
             self._attr_native_unit_of_measurement = None
             # Store possible values in extra_state_attributes
-            self._attr_extra_state_attributes = {"possible_values": list(enum_map.values())}
+            self._attr_extra_state_attributes = {
+                "possible_values": list(enum_map.values())
+            }
 
     @property
     def available(self) -> bool:
