@@ -186,11 +186,13 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._attr_translation_key = translation_key
         self._attr_icon = icon
 
-        # Set device_class to 'enum' for sensors with enum_map
+        # Enum sensors: special configuration
         if enum_map:
-            self._attr_device_class = "enum"
-            # Set options to the possible enum values
-            self._attr_options = list(enum_map.values())
+            self._attr_force_update = True
+            # Clear unit of measurement for enum sensors (they are not numeric)
+            self._attr_native_unit_of_measurement = None
+            # Store possible values in extra_state_attributes
+            self._attr_extra_state_attributes = {"possible_values": list(enum_map.values())}
 
     @property
     def available(self) -> bool:
