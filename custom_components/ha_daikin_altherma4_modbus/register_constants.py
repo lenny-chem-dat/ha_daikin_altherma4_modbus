@@ -1339,7 +1339,7 @@ CALCULATED_SENSORS = [
         register_name="delta_t",
         calc_type="delta_t",
         unit="K",
-        device_class="temperature",
+        device_class=None,
         translation_key="delta_t",
     ),
 ]
