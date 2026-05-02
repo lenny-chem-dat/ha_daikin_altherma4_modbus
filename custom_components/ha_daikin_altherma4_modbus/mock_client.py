@@ -103,11 +103,9 @@ class MockModbusTcpClient(ModbusClientInterface):
         """Generate realistic demo data for all register types based on const.py."""
         import random
 
-        from .const import (
+        from .register_constants import (
             HOLDING_REGISTERS,
-            HOLDING_SWITCHES,
             INPUT_REGISTERS,
-            SELECT_REGISTERS,
         )
 
         # Use fixed seed for deterministic mock data
@@ -116,9 +114,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         # Input registers - only generate registers that are actually defined
         input_registers = []
         max_address = (
-            max([reg.get("address", 0) for reg in INPUT_REGISTERS])
-            if INPUT_REGISTERS
-            else 0
+            max([reg.address for reg in INPUT_REGISTERS]) if INPUT_REGISTERS else 0
         )
 
         for i in range(max_address + 1):
@@ -127,7 +123,7 @@ class MockModbusTcpClient(ModbusClientInterface):
             # Find corresponding register definition
             register_def = None
             for reg in INPUT_REGISTERS:
-                if reg.get("address") == address:
+                if reg.address == address:
                     register_def = reg
                     break
 
@@ -208,9 +204,9 @@ class MockModbusTcpClient(ModbusClientInterface):
                 elif address == 87:  # Room Cooling setpoint Upper limit
                     value = 3500  # 35.0°C
                 # Check if it's an enum register
-                elif "enum_map" in register_def:
+                elif getattr(register_def, "enum_map", None):
                     enum_keys = [
-                        k for k in register_def["enum_map"].keys() if isinstance(k, int)
+                        k for k in register_def.enum_map.keys() if isinstance(k, int)
                     ]
                     if enum_keys:
                         value = random.choice(enum_keys)
@@ -218,9 +214,17 @@ class MockModbusTcpClient(ModbusClientInterface):
                         value = 32766  # Default value
                 else:
                     # Generate value based on register definition
-                    scale = register_def.get("scale", 1)
-                    min_val = register_def.get("min_value", 0)
-                    max_val = register_def.get("max_value", 100)
+                    scale = getattr(register_def, "scale", 1)
+                    min_val = (
+                        register_def.min_value
+                        if hasattr(register_def, "min_value")
+                        else 0
+                    )
+                    max_val = (
+                        register_def.max_value
+                        if hasattr(register_def, "max_value")
+                        else 100
+                    )
 
                     # Generate scaled value within range
                     scaled_value = random.uniform(min_val, max_val)
@@ -233,14 +237,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         # Holding registers - only generate registers that are actually defined
         holding_registers = []
         max_address = (
-            max(
-                [
-                    reg.get("address", 0)
-                    for reg in HOLDING_REGISTERS + HOLDING_SWITCHES + SELECT_REGISTERS
-                ]
-            )
-            if (HOLDING_REGISTERS + HOLDING_SWITCHES + SELECT_REGISTERS)
-            else 0
+            max([reg.address for reg in HOLDING_REGISTERS]) if HOLDING_REGISTERS else 0
         )
 
         for i in range(max_address + 1):
@@ -248,67 +245,78 @@ class MockModbusTcpClient(ModbusClientInterface):
 
             # Find corresponding register definition
             register_def = None
-            for reg in HOLDING_REGISTERS + HOLDING_SWITCHES + SELECT_REGISTERS:
-                if reg.get("address") == address:
+            for reg in HOLDING_REGISTERS:
+                if reg.address == address:
                     register_def = reg
                     break
 
             if register_def:
                 # Check if it's an enum register (SELECT_REGISTERS)
-                if "enum_map" in register_def:
+                if getattr(register_def, "enum_map", None):
+                    # Filter out unavailable values (32765, 32766) from enum selection
                     enum_keys = [
-                        k for k in register_def["enum_map"].keys() if isinstance(k, int)
+                        k
+                        for k in register_def.enum_map.keys()
+                        if isinstance(k, int) and k not in [32765, 32766]
                     ]
                     if enum_keys:
                         value = random.choice(enum_keys)
                     else:
                         value = 0  # Default value
-                elif register_def.get("name") in [
+                elif register_def and register_def.name in [
                     "Operation mode",
                     "Space heating/cooling",
                     "DHW mode setting",
                 ]:
                     # Handle specific select registers
-                    if register_def.get("name") == "Operation mode":
+                    if register_def.name == "Operation mode":
                         value = random.choice(
                             [0, 1, 2]
                         )  # Stop, Tank Heat Up, Space heating
-                    elif register_def.get("name") == "Space heating/cooling":
+                    elif register_def.name == "Space heating/cooling":
                         value = random.choice([0, 1])  # Space heating, DHW
-                    elif register_def.get("name") == "DHW mode setting":
+                    elif register_def.name == "DHW mode setting":
                         value = random.choice(
                             [0, 1, 2]
                         )  # Reheat, Schedule and reheat, Scheduled
                     else:
                         value = 0
-                elif register_def.get("name") in [
+                elif register_def and register_def.name in [
                     "Holiday mode",
                     "Smart Grid Operation Mode",
                     "Weather-dependent mode",
                 ]:
                     # Handle specific switch registers
-                    if register_def.get("name") == "Holiday mode":
+                    if register_def.name == "Holiday mode":
                         value = random.choice([0, 1])  # OFF, ON
-                    elif register_def.get("name") == "Smart Grid Operation Mode":
+                    elif register_def.name == "Smart Grid Operation Mode":
                         value = random.choice(
                             [0, 1, 2, 3]
                         )  # Free running, Forced off, Recommended on, Forced on
-                    elif register_def.get("name") == "Weather-dependent mode":
+                    elif register_def.name == "Weather-dependent mode":
                         value = random.choice([0, 1])  # OFF, ON
                     else:
                         value = 0
                 else:
                     # Generate value based on register definition
-                    scale = register_def.get("scale", 1)
-                    min_val = register_def.get("min_value", 0)
-                    max_val = register_def.get("max_value", 100)
+                    scale = getattr(register_def, "scale", 1)
+                    min_val = (
+                        register_def.min_value
+                        if hasattr(register_def, "min_value")
+                        else 0
+                    )
+                    max_val = (
+                        register_def.max_value
+                        if hasattr(register_def, "max_value")
+                        else 100
+                    )
 
                     # Generate scaled value within range
                     scaled_value = random.uniform(min_val, max_val)
                     value = int(scaled_value / scale)
 
                     # For signed registers (dtype: int16), convert to unsigned 16-bit
-                    if register_def.get("dtype") == "int16" and value < 0:
+                    if register_def.dtype == "int16" and value < 0:
                         value = value + 65536  # Convert to 2's complement
             else:
                 value = 0  # Default for undefined registers

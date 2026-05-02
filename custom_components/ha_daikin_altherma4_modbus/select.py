@@ -7,8 +7,14 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .common import get_coordinator_from_entry, is_entity_available, safe_write_register
-from .const import DOMAIN, HOLDING_DEVICE_INFO, SELECT_REGISTERS
+from .common import (
+    get_coordinator_from_entry,
+    get_register_value,
+    safe_write_register,
+)
+from .const import DOMAIN
+from .register_constants import HOLDING_DEVICE_INFO, HOLDING_REGISTERS
+from .register_types import SelectRegister
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,13 +27,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     entities = []
 
-    for item in SELECT_REGISTERS:
-        if item.get("enum_map"):  # Nur für Register mit enum_map
-            address = item["address"]
-            register_name = item["register_name"]
-            enum_map = item["enum_map"]
-            entity_category = item.get("entity_category")
-            translation_key = item.get("translation_key")
+    holding_selects = [
+        reg for reg in HOLDING_REGISTERS if isinstance(reg, SelectRegister)
+    ]
+    for item in holding_selects:
+        if item.enum_map:  # Nur für Register mit enum_map
+            address = item.address
+            register_name = item.register_name
+            enum_map = item.enum_map
+            entity_category = item.entity_category
+            translation_key = item.translation_key
 
             entities.append(
                 DaikinSelect(
@@ -75,15 +84,32 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
 
     @property
     def available(self) -> bool:
-        """Return True if entity is available."""
-        return is_entity_available(self.coordinator.data, self._register_name)
+        """Return True if entity is available.
+
+        For select entities, a value is available if it exists in the coordinator data
+        and is present in the enum_map, even if it's 32765 or 32766 (which are normally
+        used as unavailable markers for other register types).
+        """
+        data = self.coordinator.data.get(self._register_name)
+        if data is None:
+            return False
+        val = get_register_value(data)
+        if val is None:
+            return False
+        try:
+            int_val = int(val)
+        except (ValueError, TypeError):
+            return False
+        # For select entities, values in enum_map are always available
+        # even if they are 32765 or 32766 (e.g., DHW mode "Off" = 32766)
+        return int_val in self._enum_map or int_val not in [32765, 32766]
 
     @property
     def current_option(self):
         data = self.coordinator.data.get(self._register_name)
 
         if data:
-            val = data.get("value")
+            val = get_register_value(data)
 
             # Convert to integer if it's a string
             try:
@@ -91,10 +117,8 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
             except (ValueError, TypeError):
                 return None
 
-            # Return None for unavailable value (32765 or 32766)
-            if val == 32765 or val == 32766:
-                return None
-
+            # For select entities, values in enum_map are valid options
+            # even if they are 32765 or 32766 (e.g., DHW mode "Off" = 32766)
             if val is not None and val in self._enum_map:
                 option = self._enum_map[val]
                 return option

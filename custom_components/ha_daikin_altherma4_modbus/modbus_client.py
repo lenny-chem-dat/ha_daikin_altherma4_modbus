@@ -47,6 +47,11 @@ class OneBasedModbusResponse:
             # Place returned registers at the correct positions
             for i, value in enumerate(self.original_response.registers):
                 result[self.start_address + i] = value
+                # Log unavailable values (32765 or 32766) at debug level
+                if value in [32765, 32766]:
+                    _LOGGER.debug(
+                        f"Modbus client returned unavailable value {value} at address {self.start_address + i}"
+                    )
 
             _LOGGER.debug(
                 f"OneBasedModbusResponse: start_address={self.start_address}, len={len(self.original_response.registers)}, result_len={len(result)}"
@@ -269,16 +274,16 @@ class RealModbusTcpClient(ModbusClientInterface):
                         f"Device error reading coils at {address}"
                     )
                 return OneBasedModbusResponse(original_response, address, is_bits=True)
+            except asyncio.TimeoutError as e:
+                raise ModbusTimeoutException(f"Timeout reading coils at {address}", e)
+            except pymodbus.exceptions.ModbusException as e:
+                raise ModbusReadException(f"Modbus error reading coils at {address}", e)
             except Exception as e:
                 if pymodbus is None:
                     raise ModbusReadException(
                         f"I/O error reading coils at {address}", e
                     )
                 raise ModbusReadException(f"I/O error reading coils at {address}", e)
-            except asyncio.TimeoutError as e:
-                raise ModbusTimeoutException(f"Timeout reading coils at {address}", e)
-            except pymodbus.exceptions.ModbusException as e:
-                raise ModbusReadException(f"Modbus error reading coils at {address}", e)
 
     async def write_holding_register(self, address: int, value: int):
         await self._ensure_initialized()

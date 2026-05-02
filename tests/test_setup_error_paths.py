@@ -84,8 +84,26 @@ def _load_integration_module(
     modbus_client_module = types.ModuleType(modbus_client_name)
 
     class FakeRealModbusTcpClient:
-        async_close_cached_client = AsyncMock()
+        def __init__(self, host, port, timeout=10):
+            self.host = host
+            self.port = port
+            self._connected = False
 
+        @classmethod
+        async def create(cls, host, port, timeout=10):
+            return cls(host, port, timeout)
+
+        async def connect(self):
+            self._connected = True
+
+        async def disconnect(self):
+            self._connected = False
+
+        @property
+        def connected(self):
+            return self._connected
+
+    FakeRealModbusTcpClient.async_close_cached_client = AsyncMock()
     modbus_client_module.RealModbusTcpClient = FakeRealModbusTcpClient
     monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
 
@@ -174,9 +192,12 @@ def _load_switch_module(monkeypatch):
     module_name = f"{package_name}.switch"
     const_name = f"{package_name}.const"
 
+    register_constants_name = f"{package_name}.register_constants"
+
     _reset_modules(
         module_name,
         const_name,
+        register_constants_name,
         "homeassistant.components.switch",
         "homeassistant.helpers.update_coordinator",
     )
@@ -213,11 +234,18 @@ def _load_switch_module(monkeypatch):
 
     const_module = types.ModuleType(const_name)
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
-    const_module.COIL_SENSORS = []
-    const_module.COIL_DEVICE_INFO = {}
-    const_module.HOLDING_SWITCHES = []
-    const_module.HOLDING_DEVICE_INFO = {}
     monkeypatch.setitem(sys.modules, const_name, const_module)
+
+    # Mock register_constants module
+    register_constants_name = f"{package_name}.register_constants"
+    register_constants_module = types.ModuleType(register_constants_name)
+    register_constants_module.COIL_SENSORS = []
+    register_constants_module.COIL_DEVICE_INFO = {}
+    register_constants_module.COIL_REGISTERS = []
+    register_constants_module.HOLDING_SWITCHES = []
+    register_constants_module.HOLDING_DEVICE_INFO = {}
+    register_constants_module.HOLDING_REGISTERS = []
+    monkeypatch.setitem(sys.modules, register_constants_name, register_constants_module)
 
     module = importlib.import_module(module_name)
     # Attach HomeAssistantError to module so tests can access it
@@ -309,10 +337,12 @@ def _load_select_module(monkeypatch):
     package_name = _install_fake_package(monkeypatch)
     module_name = f"{package_name}.select"
     const_name = f"{package_name}.const"
+    register_constants_name = f"{package_name}.register_constants"
 
     _reset_modules(
         module_name,
         const_name,
+        register_constants_name,
         "homeassistant.components.select",
         "homeassistant.helpers.update_coordinator",
         "homeassistant.exceptions",
@@ -349,9 +379,16 @@ def _load_select_module(monkeypatch):
 
     const_module = types.ModuleType(const_name)
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
-    const_module.SELECT_REGISTERS = []
-    const_module.HOLDING_DEVICE_INFO = {}
     monkeypatch.setitem(sys.modules, const_name, const_module)
+
+    # Mock register_constants module
+    register_constants_name = f"{package_name}.register_constants"
+    register_constants_module = types.ModuleType(register_constants_name)
+    register_constants_module.SELECT_REGISTERS = []
+    register_constants_module.HOLDING_SELECT_REGISTERS = []
+    register_constants_module.HOLDING_DEVICE_INFO = {}
+    register_constants_module.HOLDING_REGISTERS = []
+    monkeypatch.setitem(sys.modules, register_constants_name, register_constants_module)
 
     return importlib.import_module(module_name)
 

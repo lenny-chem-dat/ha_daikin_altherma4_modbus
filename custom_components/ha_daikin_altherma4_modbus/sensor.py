@@ -6,12 +6,17 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .common import is_entity_available, is_unavailable_value
+from .common import (
+    get_register_value,
+    is_entity_available,
+    is_unavailable_value,
+    to_signed_16bit,
+)
 from .config_entry_utils import entry_value
-from .const import (
+from .const import DOMAIN
+from .register_constants import (
     CALCULATED_DEVICE_INFO,
     CALCULATED_SENSORS,
-    DOMAIN,
     INPUT_DEVICE_INFO,
     INPUT_REGISTERS,
 )
@@ -30,21 +35,21 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Input-Register Sensoren (nur ohne device_class running/problem)
     for item in INPUT_REGISTERS:
-        device_class = item.get("device_class")
+        device_class = item.device_class
         if device_class in ["running", "problem"]:
             continue  # Nur als Binärsensoren erstellen
 
-        address = item["address"]
-        register_name = item.get("register_name")
-        unit = item.get("unit", "")
-        dtype = item.get("dtype", "uint16")
-        scale = item.get("scale", 1)
-        count = item.get("count", 1)
-        icon = item.get("icon", "mdi:information")
-        enum_map = item.get("enum_map")
-        entity_category = item.get("entity_category")
-        unique_id = item.get("unique_id") or f"{DOMAIN}_{register_name}"
-        translation_key = item.get("translation_key")
+        address = item.address
+        register_name = item.register_name
+        unit = item.unit or ""
+        dtype = item.dtype or "uint16"
+        scale = item.scale or 1
+        count = item.count or 1
+        icon = item.icon or "mdi:information"
+        enum_map = item.enum_map
+        entity_category = item.entity_category
+        unique_id = item.unique_id or f"{DOMAIN}_{register_name}"
+        translation_key = item.translation_key
 
         entities.append(
             DaikinInputSensor(
@@ -85,58 +90,58 @@ async def async_setup_entry(hass, entry, async_add_entities):
     _LOGGER.debug(f"Processing {len(CALCULATED_SENSORS)} calculated sensors")
     for calc in CALCULATED_SENSORS:
         _LOGGER.debug(
-            f"Processing calculated sensor: {calc['name']} (type: {calc['type']})"
+            f"Processing calculated sensor: {calc.name} (type: {calc.calc_type})"
         )
-        if calc["type"] == "heat_power":
+        if calc.calc_type == "heat_power":
             entities.append(
                 ThermalHeatOutput(
                     coordinator=unified_coordinator,
                     entry=entry,
-                    unique_id=calc["register_name"],
-                    unit=calc["unit"],
-                    device_class=calc["device_class"],
-                    entity_category=calc["entity_category"],
+                    unique_id=calc.register_name,
+                    unit=calc.unit,
+                    device_class=calc.device_class,
+                    entity_category=calc.entity_category,
                     device_info=CALCULATED_DEVICE_INFO,
-                    translation_key=calc.get("translation_key"),
+                    translation_key=calc.translation_key,
                 )
             )
-        elif calc["type"] == "cop":
+        elif calc.calc_type == "cop":
             entities.append(
                 CalculatedCoPSensor(
                     coordinator=unified_coordinator,
                     entry=entry,
-                    unique_id=calc["register_name"],
-                    unit=calc["unit"],
-                    device_class=calc["device_class"],
-                    entity_category=calc["entity_category"],
+                    unique_id=calc.register_name,
+                    unit=calc.unit,
+                    device_class=calc.device_class,
+                    entity_category=calc.entity_category,
                     device_info=CALCULATED_DEVICE_INFO,
-                    translation_key=calc.get("translation_key"),
+                    translation_key=calc.translation_key,
                 )
             )
-        elif calc["type"] == "last_triggered":
+        elif calc.calc_type == "last_triggered":
             entities.append(
                 LastTriggeredSensor(
                     coordinator=unified_coordinator,
                     entry=entry,
-                    unique_id=calc["register_name"],
-                    unit=calc["unit"],
-                    device_class=calc["device_class"],
-                    trigger_register_name=calc["trigger_register_name"],
-                    entity_category=calc["entity_category"],
+                    unique_id=calc.register_name,
+                    unit=calc.unit,
+                    device_class=calc.device_class,
+                    trigger_register_name=calc.trigger_register_name,
+                    entity_category=calc.entity_category,
                     device_info=CALCULATED_DEVICE_INFO,
-                    translation_key=calc.get("translation_key"),
+                    translation_key=calc.translation_key,
                 )
             )
-        elif calc["type"] == "delta_t":
+        elif calc.calc_type == "delta_t":
             entities.append(
                 DeltaTSensor(
                     coordinator=unified_coordinator,
                     entry=entry,
-                    unique_id=calc["register_name"],
-                    unit=calc["unit"],
-                    device_class=calc["device_class"],
+                    unique_id=calc.register_name,
+                    unit=calc.unit,
+                    device_class=calc.device_class,
                     device_info=CALCULATED_DEVICE_INFO,
-                    translation_key=calc.get("translation_key"),
+                    translation_key=calc.translation_key,
                 )
             )
 
@@ -181,11 +186,15 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._attr_translation_key = translation_key
         self._attr_icon = icon
 
-        # Set device_class to 'enum' for sensors with enum_map
+        # Enum sensors: special configuration
         if enum_map:
-            self._attr_device_class = "enum"
-            # Set options to the possible enum values
-            self._attr_options = list(enum_map.values())
+            self._attr_force_update = True
+            # Clear unit of measurement for enum sensors (they are not numeric)
+            self._attr_native_unit_of_measurement = None
+            # Store possible values in extra_state_attributes
+            self._attr_extra_state_attributes = {
+                "possible_values": list(enum_map.values())
+            }
 
     @property
     def available(self) -> bool:
@@ -198,7 +207,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data.get(self._attr_register_name)
         if data is None:
             return None
-        val = data.get("value")
+        val = get_register_value(data)
         if val is None:
             return None
 
@@ -206,24 +215,22 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         if self._dtype == "string":
             return str(val) if val is not None else None
 
+        # Convert to appropriate type based on sensor characteristics
+        try:
+            # For scaled sensors, keep as float to preserve decimal places
+            if self._scale != 1:
+                val = float(val)
+            else:
+                val = int(val)
+        except (ValueError, TypeError):
+            return None
+
         # Return None for unavailable value (32765 or 32766)
         if is_unavailable_value(val):
             return None
 
-        # Check if value is already scaled by checking if scale is stored in data
-        data_scale = data.get("scale")
-
-        # Convert to appropriate type based on sensor characteristics
-        try:
-            # For scaled sensors, keep as float to preserve decimal places
-            if self._scale != 1 or (data_scale is not None and data_scale != 1):
-                # This is a scaled sensor - convert to float
-                val = float(val)
-            else:
-                # This is not a scaled sensor - convert to int
-                val = int(val)
-        except (ValueError, TypeError):
-            return None
+        # Convert unsigned 16-bit to signed integer safely
+        val = to_signed_16bit(val)
 
         # ENUM Mapping
         if self._enum_map:
@@ -237,49 +244,38 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
                 )
                 return "Unknown"
 
-        if data_scale is not None:
-            # Value is already scaled by data_manager
-            scaled_value = val
-        else:
-            # Value is not scaled yet, apply scaling
-            scaled_value = val * self._scale
-
+        # Value is already scaled by data_manager
         # Auf 2 Nachkommastellen runden bei °C Sensoren
         if self._attr_native_unit_of_measurement == "°C":
-            final_value = round(scaled_value, 2)
-            return final_value
+            return round(val, 2)
 
-        return scaled_value
+        return val
 
 
 def calculate_thermal_heat_output(coordinator):
     """Berechnet die thermische Leistung in W."""
-    # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren
-    flow_data = coordinator.data.get("input_49", {})
-    flow_raw = flow_data.get("value", 0)  # Flow rate (roh)
-    temp_vl_data = coordinator.data.get("input_40", {})
-    temp_vl_raw = temp_vl_data.get("value", 0)  # Leaving water temperature PHE (roh)
-    temp_rl_data = coordinator.data.get("input_42", {})
-    temp_rl_raw = temp_rl_data.get("value", 0)  # Return water temperature (roh)
+    from .const import (
+        REGISTER_FLOW_RATE,
+        REGISTER_LEAVING_WATER_TEMP,
+        REGISTER_RETURN_WATER_TEMP,
+    )
 
-    # Check if values are already scaled by checking if scale is stored in data
-    flow_scale = flow_data.get("scale")
-    if flow_scale is not None:
-        flow = flow_raw  # Already scaled by data_manager
-    else:
-        flow = flow_raw * 0.01  # L/min (korrekte Skalierung)
+    # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren (bereits skaliert)
+    flow_data = coordinator.data.get(REGISTER_FLOW_RATE, {})
+    flow_raw = get_register_value(flow_data) or 0  # Flow rate in L/min
+    temp_vl_data = coordinator.data.get(REGISTER_LEAVING_WATER_TEMP, {})
+    temp_vl_raw = (
+        get_register_value(temp_vl_data) or 0
+    )  # Leaving water temperature PHE in °C
+    temp_rl_data = coordinator.data.get(REGISTER_RETURN_WATER_TEMP, {})
+    temp_rl_raw = (
+        get_register_value(temp_rl_data) or 0
+    )  # Return water temperature in °C
 
-    temp_vl_scale = temp_vl_data.get("scale")
-    if temp_vl_scale is not None:
-        temp_vl = temp_vl_raw  # Already scaled by data_manager
-    else:
-        temp_vl = temp_vl_raw * 0.01  # °C (korrekte Skalierung)
-
-    temp_rl_scale = temp_rl_data.get("scale")
-    if temp_rl_scale is not None:
-        temp_rl = temp_rl_raw  # Already scaled by data_manager
-    else:
-        temp_rl = temp_rl_raw * 0.01  # °C (korrekte Skalierung)
+    # Values from coordinator are already scaled by data_manager
+    flow = flow_raw  # L/min
+    temp_vl = temp_vl_raw  # °C
+    temp_rl = temp_rl_raw  # °C
 
     delta_t = temp_vl - temp_rl
     thermal_heat_output = flow * delta_t * 70  # Berechnung thermische Leistung in W
@@ -379,23 +375,11 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
             electric_power = None
 
         if electric_power is None:
-            # Modbus
-            power_data = self.coordinator.data.get("input_51", {})
-            electric_power_raw = power_data.get(
-                "value", 0
-            )  # Heat pump power consumption (roh)
+            # Modbus - value is already scaled by data_manager
+            from .const import REGISTER_HEAT_PUMP_POWER
 
-            # Check if value is already scaled by checking if scale is stored in data
-            data_scale = power_data.get("scale")
-
-            if data_scale is not None:
-                # Value is already scaled by data_manager
-                electric_power = electric_power_raw
-            else:
-                # Value is not scaled yet, apply scaling
-                electric_power = electric_power_raw * power_data.get(
-                    "scale", 10
-                )  # in W
+            power_data = self.coordinator.data.get(REGISTER_HEAT_PUMP_POWER, {})
+            electric_power = get_register_value(power_data) or 0  # in W
 
         if electric_power and electric_power > 0 and heat_power > 0:
             # Beide Leistungen in W, direkte Berechnung
@@ -471,8 +455,14 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
     @property
     def native_value(self):
         data = self.coordinator.data.get(self._attr_unique_id)
-        if data and isinstance(data, dict):
-            value = data.get("value")
+        if data:
+            value = (
+                data.value
+                if hasattr(data, "value")
+                else data.get("value")
+                if isinstance(data, dict)
+                else None
+            )
             if value is not None:
                 self._restored_value = value
                 return value
@@ -578,14 +568,20 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Calculate the temperature difference between flow and return."""
-        # Vorlauftemperatur (Leaving water temperature PHE)
-        flow_temp_data = self.coordinator.data.get("input_40", {})
-        flow_temp = flow_temp_data.get("value", 0)
+        from .const import (
+            REGISTER_LEAVING_WATER_TEMP,
+            REGISTER_RETURN_WATER_TEMP,
+        )
 
-        # Rücklauftemperatur (Return water temperature)
-        return_temp_data = self.coordinator.data.get("input_42", {})
-        return_temp = return_temp_data.get("value", 0)
+        # Vorlauftemperatur (Leaving water temperature PHE) - already scaled
+        flow_temp_data = self.coordinator.data.get(REGISTER_LEAVING_WATER_TEMP, {})
+        flow_temp = get_register_value(flow_temp_data) or 0  # °C
+
+        # Rücklauftemperatur (Return water temperature) - already scaled
+        return_temp_data = self.coordinator.data.get(REGISTER_RETURN_WATER_TEMP, {})
+        return_temp = get_register_value(return_temp_data) or 0  # °C
 
         # Delta-T berechnen und auf 2 Nachkommastellen runden
+        _LOGGER.debug(f"Delta-T: {flow_temp} - {return_temp}")
         delta_t = flow_temp - return_temp
         return round(delta_t, 2)

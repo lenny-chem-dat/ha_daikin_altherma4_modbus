@@ -6,14 +6,15 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .common import safe_write_register
-from .const import (
+from .common import get_register_value, safe_write_register
+from .const import DOMAIN
+from .register_constants import (
     COIL_DEVICE_INFO,
-    COIL_SENSORS,
-    DOMAIN,
+    COIL_REGISTERS,
     HOLDING_DEVICE_INFO,
-    HOLDING_SWITCHES,
+    HOLDING_REGISTERS,
 )
+from .register_types import SwitchRegister
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,32 +29,35 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities = []
 
     # Coil Switches
-    _LOGGER.debug(f"Processing {len(COIL_SENSORS)} coil switches")
-    for coil in COIL_SENSORS:
+    _LOGGER.debug(f"Processing {len(COIL_REGISTERS)} coil switches")
+    for coil in COIL_REGISTERS:
         entities.append(
             DaikinCoilSwitch(
                 coordinator=coordinator,
                 entry=entry,
-                address=coil["address"],
-                register_name=coil.get("register_name"),
-                translation_key=coil.get("translation_key"),
+                address=coil.address,
+                register_name=coil.register_name,
+                translation_key=coil.translation_key,
             )
         )
 
     # Holding Register Switches
-    _LOGGER.debug(f"Processing {len(HOLDING_SWITCHES)} holding switches")
-    for holding_switch in HOLDING_SWITCHES:
+    holding_switches = [
+        reg for reg in HOLDING_REGISTERS if isinstance(reg, SwitchRegister)
+    ]
+    _LOGGER.debug(f"Processing {len(holding_switches)} holding switches")
+    for holding_switch in holding_switches:
         _LOGGER.debug(
-            f"Creating holding switch: {holding_switch['name']} (address: {holding_switch['address']}, register: {holding_switch.get('register_name')})"
+            f"Creating holding switch: {holding_switch.name} (address: {holding_switch.address}, register: {holding_switch.register_name})"
         )
         entities.append(
             DaikinHoldingSwitch(
                 coordinator=coordinator,
                 entry=entry,
-                address=holding_switch["address"],
-                register_name=holding_switch.get("register_name"),
-                translation_key=holding_switch.get("translation_key"),
-                enum_map=holding_switch.get("enum_map"),
+                address=holding_switch.address,
+                register_name=holding_switch.register_name,
+                translation_key=holding_switch.translation_key,
+                enum_map=holding_switch.enum_map,
             )
         )
 
@@ -86,7 +90,7 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
         data = self.coordinator.data.get(self._register_name)
         if data is None:
             return False
-        val = data.get("value")
+        val = get_register_value(data)
         return val == 1
 
     async def async_turn_on(self, **kwargs):
@@ -167,7 +171,7 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
         if data is None:
             _LOGGER.warning(f"No data found for holding switch {self._register_name}")
             return False
-        val = data.get("value")
+        val = get_register_value(data)
         _LOGGER.debug(f"Holding switch {self._register_name} value: {val}")
         # For enum switches, check if value corresponds to "On" state
         if self._enum_map:

@@ -512,32 +512,17 @@
       "holding_2": {
         "name": "Main cooling setpoint"
       },
-      "holding_3": {
-        "name": "Operation mode"
-      },
-      "holding_4": {
-        "name": "Space heating/cooling"
-      },
       "holding_6": {
         "name": "Room thermostat control heating setpoint main"
       },
       "holding_7": {
         "name": "Room thermostat control cooling setpoint main"
       },
-      "holding_9": {
-        "name": "Quiet mode operation"
-      },
       "holding_10": {
         "name": "DHW reheat setpoint"
       },
-      "holding_13": {
-        "name": "DHW booster mode ON/OFF (Powerful)"
-      },
       "holding_14": {
         "name": "DHW additional setpoint (powerful)"
-      },
-      "holding_15": {
-        "name": "DHW single heat-up (manual)"
       },
       "holding_16": {
         "name": "DHW single heat-up setpoint (manual)"
@@ -547,9 +532,6 @@
       },
       "holding_55": {
         "name": "Weather-dependent mode main LWT cooling setpoint offset"
-      },
-      "holding_56": {
-        "name": "Smart grid operation mode"
       },
       "holding_58": {
         "name": "Imposed power limit"
@@ -565,18 +547,6 @@
       },
       "holding_67": {
         "name": "Weather-dependent mode additional LWT cooling setpoint offset"
-      },
-      "holding_68": {
-        "name": "Weather-dependent mode heating main"
-      },
-      "holding_69": {
-        "name": "Weather-dependent mode cooling main"
-      },
-      "holding_74": {
-        "name": "Thermostat request main"
-      },
-      "holding_75": {
-        "name": "Thermostat request additional"
       },
       "holding_76": {
         "name": "Room thermostat control heating setpoint main"
@@ -595,20 +565,23 @@
       "holding_3": {
         "name": "Operation mode"
       },
-      "holding_4": {
-        "name": "Space heating/cooling"
-      },
       "holding_9": {
         "name": "Quiet mode operation"
       },
-      "holding_13": {
-        "name": "DHW auxiliary heating mode(powerful)"
-      },
-      "holding_15": {
-        "name": "DHW single heat-up(manual)"
-      },
       "holding_56": {
         "name": "Smart grid operation mode"
+      },
+      "holding_68": {
+        "name": "Weather-dependent mode heating main"
+      },
+      "holding_69": {
+        "name": "Weather-dependent mode cooling main"
+      },
+      "holding_74": {
+        "name": "Thermostat request main"
+      },
+      "holding_75": {
+        "name": "Thermostat request additional"
       },
       "holding_80": {
         "name": "DHW mode setting"

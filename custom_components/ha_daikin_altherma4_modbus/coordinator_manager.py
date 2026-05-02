@@ -205,6 +205,11 @@ class UnifiedCoordinator(DataUpdateCoordinator):
             f"triggering automatic refresh"
         )
         # Track refresh tasks so they can be cancelled on unload.
+        # Use call_soon_threadsafe to ensure async_create_task is called from the main loop
+        self.hass.loop.call_soon_threadsafe(lambda: self._schedule_refresh_task())
+
+    def _schedule_refresh_task(self) -> None:
+        """Schedule refresh task from the main event loop."""
         if hasattr(self.hass, "async_create_task"):
             task = self.hass.async_create_task(self._async_refresh_after_write())
         else:
