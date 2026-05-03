@@ -64,3 +64,10 @@ HVAC_COOL = 2
 # DHW constants
 DHW_OFF = False
 DHW_ON = True
+
+# Service names
+SERVICE_SET_OPERATION_MODE = "set_operation_mode"
+SERVICE_SET_DHW_STATE = "set_dhw_state"
+SERVICE_SET_MAIN_ZONE_STATE = "set_main_zone_state"
+SERVICE_SET_ADDITIONAL_ZONE_STATE = "set_additional_zone_state"
+SERVICE_SET_SMART_GRID_MODE = "set_smart_grid_mode"
