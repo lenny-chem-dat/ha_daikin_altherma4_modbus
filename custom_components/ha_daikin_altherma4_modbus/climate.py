@@ -279,6 +279,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
                 offset_raw,
                 operation_name="set",
                 register_type="thermostat offset",
+                coordinator=self.coordinator,
             )
         else:
             await safe_write_register(
@@ -287,6 +288,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
                 offset_raw,
                 operation_name="set",
                 register_type="thermostat offset",
+                coordinator=self.coordinator,
             )
         _LOGGER.debug(f"Set thermostat offset to {offset}°C (raw: {offset_raw})")
 
@@ -312,6 +314,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
             mode_raw,
             operation_name="set",
             register_type="HVAC mode",
+            coordinator=self.coordinator,
         )
         _LOGGER.debug(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
 
@@ -327,6 +330,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
             mode_raw,
             operation_name="set",
             register_type="fan mode",
+            coordinator=self.coordinator,
         )
         _LOGGER.debug(f"Set fan mode to {fan_mode} (raw: {mode_raw})")
 
@@ -501,6 +505,7 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
                 DHW_ON,
                 operation_name="turn on",
                 register_type=f"{self._dhw_type} DHW heat-up",
+                coordinator=self.coordinator,
             )
             _LOGGER.debug(f"Successfully turned on {self._dhw_type} DHW heat-up")
         elif hvac_mode == HVACMode.OFF:
@@ -510,6 +515,7 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
                 DHW_OFF,
                 operation_name="turn off",
                 register_type=f"{self._dhw_type} DHW heat-up",
+                coordinator=self.coordinator,
             )
             _LOGGER.debug(f"Successfully turned off {self._dhw_type} DHW heat-up")
 
@@ -534,6 +540,7 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
             raw_value,
             operation_name="set",
             register_type=f"{self._dhw_type} DHW temperature",
+            coordinator=self.coordinator,
         )
         _LOGGER.debug(
             f"Successfully set {self._dhw_type} DHW heat-up temperature to {temperature}°C (raw: {raw_value})"

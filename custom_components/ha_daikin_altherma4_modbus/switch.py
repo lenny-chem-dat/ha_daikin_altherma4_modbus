@@ -101,6 +101,7 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
             True,
             operation_name="turn on",
             register_type="coil",
+            coordinator=self.coordinator,
         )
         _LOGGER.debug(f"Successfully turned on coil {self._address}")
 
@@ -112,6 +113,7 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
             False,
             operation_name="turn off",
             register_type="coil",
+            coordinator=self.coordinator,
         )
         _LOGGER.debug(f"Successfully turned off coil {self._address}")
 
@@ -186,6 +188,7 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
             self._on_value,
             operation_name="turn on",
             register_type="holding register",
+            coordinator=self.coordinator,
         )
         _LOGGER.debug(f"Successfully turned on holding register {self._address}")
 
@@ -197,5 +200,6 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
             self._off_value,
             operation_name="turn off",
             register_type="holding register",
+            coordinator=self.coordinator,
         )
         _LOGGER.debug(f"Successfully turned off holding register {self._address}")

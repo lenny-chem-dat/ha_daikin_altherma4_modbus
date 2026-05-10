@@ -5,6 +5,7 @@ from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .common import (
+    get_register_config,
     get_register_scale,
     get_register_value,
     is_entity_available,
@@ -152,8 +153,52 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
     async def async_set_native_value(self, value):
         raw = int(value / self._scale)
 
-        # Convert signed integer to unsigned 16-bit safely
-        raw = to_unsigned_16bit(raw)
+        # Get register configuration for dynamic handling
+        register_config = get_register_config(self._register_name)
+        
+        # Enhanced debug logging for all register conversions
+        _LOGGER.debug(
+            f"DEBUG: {self._register_name} conversion - input: {value}, scale: {self._scale}, "
+            f"raw_value: {raw}, dtype: {register_config.dtype if register_config else 'unknown'}"
+        )
+
+        # Handle different register types dynamically based on configuration
+        if register_config:
+            if register_config.dtype == "int16":
+                # Handle signed 16-bit registers
+                if hasattr(register_config, 'min_value') and hasattr(register_config, 'max_value'):
+                    # Clamp to device-specific range
+                    min_raw = int(register_config.min_value / register_config.scale) if register_config.scale != 0 else register_config.min_value
+                    max_raw = int(register_config.max_value / register_config.scale) if register_config.scale != 0 else register_config.max_value
+                    raw = max(min_raw, min(max_raw, raw))
+                    _LOGGER.debug(f"DEBUG: {self._register_name} clamped to device range {register_config.min_value}-{register_config.max_value}: {raw}")
+                else:
+                    # Clamp to signed 16-bit range
+                    raw = max(-32768, min(32767, raw))
+                    _LOGGER.debug(f"DEBUG: {self._register_name} clamped to int16 range: {raw}")
+                
+                # Convert to unsigned 2's complement for Modbus transmission
+                if raw < 0:
+                    raw = raw + 65536
+                    _LOGGER.debug(f"DEBUG: {self._register_name} two's complement conversion: {raw}")
+            elif register_config.dtype == "uint16":
+                # Handle unsigned 16-bit registers
+                if hasattr(register_config, 'min_value') and hasattr(register_config, 'max_value'):
+                    # Clamp to device-specific range
+                    min_raw = int(register_config.min_value / register_config.scale) if register_config.scale != 0 else register_config.min_value
+                    max_raw = int(register_config.max_value / register_config.scale) if register_config.scale != 0 else register_config.max_value
+                    raw = max(min_raw, min(max_raw, raw))
+                    _LOGGER.debug(f"DEBUG: {self._register_name} clamped to device range {register_config.min_value}-{register_config.max_value}: {raw}")
+                else:
+                    # Clamp to unsigned 16-bit range
+                    raw = max(0, min(65535, raw))
+                    _LOGGER.debug(f"DEBUG: {self._register_name} clamped to uint16 range: {raw}")
+        else:
+            # Fallback: Convert signed integer to unsigned 16-bit safely
+            raw = to_unsigned_16bit(raw)
+            _LOGGER.debug(f"DEBUG: {self._register_name} fallback conversion: {raw}")
+
+        _LOGGER.debug(f"DEBUG: {self._register_name} final raw value: {raw}")
 
         await safe_write_register(
             self._coordinator.data_manager.write_holding_register,
@@ -161,4 +206,5 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
             raw,
             operation_name="set value for",
             register_type="number",
+            coordinator=self._coordinator,
         )

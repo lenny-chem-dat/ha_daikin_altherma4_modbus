@@ -34,6 +34,8 @@ class OneBasedModbusResponse:
         self.original_response = original_response
         self.start_address = start_address  # The starting address that was requested
         self.is_bits = is_bits
+        # Track logged unavailable values to prevent spam
+        self._logged_unavailable = set()
 
     @property
     def registers(self):
@@ -47,11 +49,14 @@ class OneBasedModbusResponse:
             # Place returned registers at the correct positions
             for i, value in enumerate(self.original_response.registers):
                 result[self.start_address + i] = value
-                # Log unavailable values (32765 or 32766) at debug level
+                # Log unavailable values (32765 or 32766) at debug level, but only once per address
                 if value in [32765, 32766]:
-                    _LOGGER.debug(
-                        f"Modbus client returned unavailable value {value} at address {self.start_address + i}"
-                    )
+                    address_key = f"{value}_{self.start_address + i}"
+                    if address_key not in self._logged_unavailable:
+                        _LOGGER.debug(
+                            f"Modbus client returned unavailable value {value} at address {self.start_address + i}"
+                        )
+                        self._logged_unavailable.add(address_key)
 
             _LOGGER.debug(
                 f"OneBasedModbusResponse: start_address={self.start_address}, len={len(self.original_response.registers)}, result_len={len(result)}"
@@ -293,8 +298,15 @@ class RealModbusTcpClient(ModbusClientInterface):
             try:
                 result = await self._client.write_register(address - 1, value)
                 if self._is_modbus_error(result):
+                    # Log detailed Modbus exception information for debugging
+                    exception_code = getattr(result, 'exception_code', 'unknown')
+                    function_code = getattr(result, 'function_code', 'unknown')
+                    _LOGGER.error(
+                        f"Modbus device error writing holding register {address}: "
+                        f"Exception code: {exception_code}, Function code: {function_code}"
+                    )
                     raise ModbusDeviceException(
-                        f"Device error writing holding register {address}"
+                        f"Device error writing holding register {address} (exception: {exception_code})"
                     )
                 return result
             except pymodbus.exceptions.ModbusIOException as e:

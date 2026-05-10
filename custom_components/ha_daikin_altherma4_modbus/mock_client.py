@@ -78,11 +78,10 @@ class MockModbusTcpClient(ModbusClientInterface):
         self, address: int, value: int
     ) -> "MockModbusResponse":
         """Mock write holding register."""
-        # Convert 1-based address to 0-based for internal use
-        internal_address = address - 1
+        # Address is already 0-based (modbus_client.py converts it)
         # Update the mock data
-        if 0 <= internal_address < len(self._demo_data["holding_registers"]):
-            self._demo_data["holding_registers"][internal_address] = value
+        if 0 <= address < len(self._demo_data["holding_registers"]):
+            self._demo_data["holding_registers"][address] = value
         _LOGGER.debug(f"Mock write holding register {address} with value {value}")
         return MockModbusResponse([], 0, 0)  # Success response
 
@@ -90,11 +89,10 @@ class MockModbusTcpClient(ModbusClientInterface):
         self, address: int, value: bool
     ) -> "MockModbusResponse":
         """Mock write coil."""
-        # Convert 1-based address to 0-based for internal use
-        internal_address = address - 1
+        # Address is already 0-based (modbus_client.py converts it)
         # Update the mock data
-        if 0 <= internal_address < len(self._demo_data["coils"]):
-            self._demo_data["coils"][internal_address] = value
+        if 0 <= address < len(self._demo_data["coils"]):
+            self._demo_data["coils"][address] = value
         _LOGGER.debug(f"Mock write coil {address} with value {value}")
         return MockModbusResponse([], 0, 0)  # Success response
 
