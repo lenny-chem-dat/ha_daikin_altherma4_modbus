@@ -854,7 +854,7 @@ HOLDING_REGISTERS = [
         dtype="int16",
         min_value=0,
         max_value=20,
-        step=0.01,
+        step=0.5,
         translation_key="holding_58",
     ),
     NumberRegister(
