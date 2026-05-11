@@ -75,22 +75,22 @@ def _load_number_module(monkeypatch):
     common_module.safe_write_register = AsyncMock()
     common_module.to_signed_16bit = lambda x: x if x < 32768 else x - 65536
     common_module.to_unsigned_16bit = lambda x: x if x >= 0 else x + 65536
-    
+
     # Mock get_register_config to make it available in test environment
     def mock_get_register_config(register_name, register_list=None):
         if register_name == "holding_58":
             # Return mock register configuration for holding_58 (Pow16Signed)
             from types import SimpleNamespace
+
             return SimpleNamespace(
                 register_name="holding_58",
-                dtype="int16",
-                scale=0.01,  # Pow16Signed has /100 scaling
+                data_type=SimpleNamespace(scaling=0.01, name="Pow16"),
                 min_value=0,
                 max_value=20,
-                unit="kW"
+                unit="kW",
             )
         return None
-    
+
     common_module.get_register_config = mock_get_register_config
     monkeypatch.setitem(sys.modules, common_name, common_module)
 
@@ -108,15 +108,34 @@ def _load_number_module(monkeypatch):
     class NumberRegister:
         pass
 
+    # Mock RegisterDataType
+    class MockRegisterDataType:
+        def __init__(self, name, signed, bits, scaling, range=None):
+            self.name = name
+            self.signed = signed
+            self.bits = bits
+            self.scaling = scaling
+            self.range = range
+
     register_types_module.NumberRegister = NumberRegister
+    register_types_module.RegisterDataType = MockRegisterDataType
+    register_types_module.INT16 = MockRegisterDataType(
+        "Int16", True, 16, 1, (-32768, 32767)
+    )
+    register_types_module.TEMP16 = MockRegisterDataType(
+        "Temp16", True, 16, 0.01, (-327.68, 327.67)
+    )
+    register_types_module.POW16 = MockRegisterDataType(
+        "Pow16", True, 16, 0.01, (-327.68, 327.67)
+    )
     monkeypatch.setitem(sys.modules, register_types_name, register_types_module)
 
     # Create mock holding registers that are instances of NumberRegister
     class MockRegister(NumberRegister):
         def __init__(self, **kwargs):
-            # Set default dtype if not provided
-            if 'dtype' not in kwargs:
-                kwargs['dtype'] = 'int16'
+            # Set default data_type if not provided
+            if "data_type" not in kwargs:
+                kwargs["data_type"] = None
             for k, v in kwargs.items():
                 setattr(self, k, v)
 
@@ -127,7 +146,7 @@ def _load_number_module(monkeypatch):
             max_value=100,
             step=1,
             unit="°C",
-            scale=1,
+            data_type=register_types_module.INT16,
             register_name="holding_1",
             enum_map=None,
             entity_category=None,
@@ -139,7 +158,7 @@ def _load_number_module(monkeypatch):
             max_value=5,
             step=1,
             unit="",
-            scale=1,
+            data_type=register_types_module.INT16,
             register_name="holding_2",
             enum_map={0: "Off", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"},
             entity_category="config",
@@ -217,7 +236,7 @@ def test_daikin_number_initialization(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=0.1,
+        data_type=0.1,
         register_name="holding_1",
         enum_map=None,
         entity_category="config",
@@ -249,7 +268,7 @@ def test_daikin_number_available(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -274,7 +293,7 @@ def test_daikin_number_native_value_with_data_scale(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=0.1,
+        data_type=0.1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -300,7 +319,7 @@ def test_daikin_number_native_value_without_scale(monkeypatch):
         max_v=100,
         step=0.1,
         unit="°C",
-        scale=0.1,
+        data_type=0.1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -326,7 +345,7 @@ def test_daikin_number_native_value_none_data(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -351,7 +370,7 @@ def test_daikin_number_native_value_invalid_string(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -377,7 +396,7 @@ def test_daikin_number_native_value_unavailable_values(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -406,7 +425,7 @@ def test_daikin_number_native_value_with_enum_map(monkeypatch):
         max_v=5,
         step=1,
         unit="",
-        scale=1,
+        data_type=1,
         register_name="holding_2",
         enum_map={0: "Off", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"},
         entity_category=None,
@@ -432,7 +451,7 @@ def test_daikin_number_mode_with_enum_map(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map={0: "Off", 1: "On"},
         entity_category=None,
@@ -457,7 +476,7 @@ def test_daikin_number_mode_without_enum_map(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -485,7 +504,7 @@ async def test_daikin_number_async_set_native_value(monkeypatch):
         max_v=100,
         step=0.1,
         unit="°C",
-        scale=0.1,
+        data_type=0.1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -518,7 +537,7 @@ async def test_daikin_number_async_set_native_value_negative(monkeypatch):
         max_v=50,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -594,12 +613,19 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
     common_module = types.ModuleType(common_name)
 
     async def safe_write_register(
-        write_func, register_name, value, operation_name="write", register_type="register", coordinator=None
+        write_func,
+        register_name,
+        value,
+        operation_name="write",
+        register_type="register",
+        coordinator=None,
     ):
         logger = logging.getLogger(common_name)
         try:
             await write_func(register_name, value)
-            logger.debug(f"Successfully {operation_name} {register_type} {register_name}")
+            logger.debug(
+                f"Successfully {operation_name} {register_type} {register_name}"
+            )
         except Exception as e:
             logger.error(f"Error {operation_name} {register_type} {register_name}: {e}")
             # Refresh coordinator on error to ensure entity state matches device (THE FIX)
@@ -608,7 +634,9 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
                     await coordinator.async_request_refresh()
                 except Exception as refresh_err:
                     logger.debug(f"Failed to refresh after write error: {refresh_err}")
-            raise Exception(f"Failed to {operation_name} {register_type} {register_name}: {e}") from e
+            raise Exception(
+                f"Failed to {operation_name} {register_type} {register_name}: {e}"
+            ) from e
 
     common_module.safe_write_register = safe_write_register
     common_module.get_register_scale = lambda data: (
@@ -626,13 +654,13 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
         """Return mock register config for holding_58."""
         if register_name == "holding_58":
             from types import SimpleNamespace
+
             return SimpleNamespace(
                 register_name="holding_58",
-                dtype="int16",
-                scale=0.01,
                 min_value=0,
                 max_value=20,
                 unit="kW",
+                data_type=SimpleNamespace(scaling=0.01, name="Pow16"),
             )
         return None
 
@@ -669,7 +697,7 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
             max_value=100,
             step=1,
             unit="°C",
-            scale=1,
+            data_type=1,
             register_name="holding_58",
             enum_map=None,
             entity_category=None,
@@ -692,7 +720,7 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
     data_manager = SimpleNamespace(write_holding_register=failing_write)
     coordinator = SimpleNamespace(
         data_manager=data_manager,
-        data={"holding_58": {"value": 20, "scale": 1}}  # Initial value is 20
+        data={"holding_58": {"value": 20, "scale": 1}},  # Initial value is 20
     )
     entry = SimpleNamespace()
 
@@ -704,7 +732,7 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_58",
         enum_map=None,
         entity_category=None,

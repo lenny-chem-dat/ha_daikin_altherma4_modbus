@@ -182,9 +182,13 @@ async def safe_write_register(
     from homeassistant.exceptions import HomeAssistantError
 
     # Enhanced debug logging for troubleshooting holding_58 write issues
-    _LOGGER.debug(f"Attempting {operation_name} {register_type} {register_name} with value {value}")
+    _LOGGER.debug(
+        f"Attempting {operation_name} {register_type} {register_name} with value {value}"
+    )
     if register_name == "holding_58":
-        _LOGGER.debug(f"DEBUG: holding_58 write details - value: {value} (type: {type(value)})")
+        _LOGGER.debug(
+            f"DEBUG: holding_58 write details - value: {value} (type: {type(value)})"
+        )
 
     try:
         await write_func(register_name, value)
@@ -193,7 +197,9 @@ async def safe_write_register(
         _LOGGER.error(f"Error {operation_name} {register_type} {register_name}: {e}")
         # Enhanced error logging for holding_58
         if register_name == "holding_58":
-            _LOGGER.error(f"DEBUG: holding_58 failed - value: {value}, error type: {type(e).__name__}, error: {e}")
+            _LOGGER.error(
+                f"DEBUG: holding_58 failed - value: {value}, error type: {type(e).__name__}, error: {e}"
+            )
         # Refresh coordinator to ensure entity state matches actual device state
         if coordinator is not None:
             try:
@@ -207,7 +213,9 @@ async def safe_write_register(
         _LOGGER.error(f"Error {operation_name} {register_type} {register_name}: {e}")
         # Enhanced error logging for holding_58
         if register_name == "holding_58":
-            _LOGGER.error(f"DEBUG: holding_58 failed - value: {value}, error type: {type(e).__name__}, error: {e}")
+            _LOGGER.error(
+                f"DEBUG: holding_58 failed - value: {value}, error type: {type(e).__name__}, error: {e}"
+            )
         # Refresh coordinator to ensure entity state matches actual device state
         if coordinator is not None:
             try:
@@ -318,19 +326,23 @@ def clamp_16bit(value: int) -> int:
 def get_register_config(register_name: str, register_list=None):
     """
     Get register configuration dynamically from register lists.
-    
+
     Args:
         register_name: Name of the register to find
         register_list: List of registers to search (defaults to HOLDING_REGISTERS)
-        
+
     Returns:
         Register configuration object or None if not found
     """
     if register_list is None:
         from .register_constants import HOLDING_REGISTERS
+
         register_list = HOLDING_REGISTERS
-    
+
     for register in register_list:
-        if hasattr(register, 'register_name') and register.register_name == register_name:
+        if (
+            hasattr(register, "register_name")
+            and register.register_name == register_name
+        ):
             return register
     return None

@@ -5,6 +5,7 @@ import logging
 import time
 from typing import Any
 
+from .common import to_signed_16bit
 from .const import MAX_MODBUS_ADDRESS, MIN_MODBUS_ADDRESS
 from .exceptions import (
     ModbusConnectionException,
@@ -71,6 +72,27 @@ class ModbusRegisterRepository:
 
     def __init__(self, session: ModbusTransportSession):
         self._session = session
+
+    def _apply_signed_conversion(self, value: int, register_def) -> int:
+        """Apply signed/unsigned conversion based on register data_type."""
+        if (
+            register_def is not None
+            and hasattr(register_def, "data_type")
+            and register_def.data_type is not None
+            and register_def.data_type.signed
+        ):
+            return to_signed_16bit(value)
+        return value
+
+    def _apply_scaling(self, value: int, register_def) -> float:
+        """Apply scaling based on register data_type."""
+        if (
+            register_def is not None
+            and hasattr(register_def, "data_type")
+            and register_def.data_type is not None
+        ):
+            return value * register_def.data_type.scaling
+        return float(value)
 
     async def read_input_blocks(self) -> list[tuple[Any, int, int, int]]:
         """Read configured input-register blocks."""
@@ -224,6 +246,24 @@ class ModbusRegisterRepository:
         address = _validate_modbus_address(
             address, f"holding register address {register_name}"
         )
+
+        # Get register configuration to check if signed conversion is needed
+        from .common import get_register_config
+
+        register_config = get_register_config(register_name)
+
+        # Convert signed value to unsigned for Modbus transmission if needed
+        if (
+            register_config is not None
+            and hasattr(register_config, "data_type")
+            and register_config.data_type is not None
+            and register_config.data_type.signed
+            and value < 0
+        ):
+            value = value + 65536  # Convert to 2's complement
+            _LOGGER.debug(
+                f"Converted signed value to unsigned for {register_name}: {value}"
+            )
 
         try:
             result = await client.write_holding_register(address, value)

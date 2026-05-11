@@ -297,7 +297,16 @@ class MockModbusTcpClient(ModbusClientInterface):
                         value = 0
                 else:
                     # Generate value based on register definition
-                    scale = getattr(register_def, "scale", 1)
+                    # Get scale from data_type.scaling if available
+                    scale = 1
+                    if (
+                        hasattr(register_def, "data_type")
+                        and register_def.data_type is not None
+                    ):
+                        scale = getattr(register_def.data_type, "scaling", 1)
+                    else:
+                        scale = getattr(register_def, "scale", 1)
+
                     min_val = (
                         register_def.min_value
                         if hasattr(register_def, "min_value")
@@ -311,11 +320,25 @@ class MockModbusTcpClient(ModbusClientInterface):
 
                     # Generate scaled value within range
                     scaled_value = random.uniform(min_val, max_val)
-                    value = int(scaled_value / scale)
+                    value = (
+                        int(scaled_value / scale) if scale != 0 else int(scaled_value)
+                    )
 
-                    # For signed registers (dtype: int16), convert to unsigned 16-bit
-                    if register_def.dtype == "int16" and value < 0:
+                    # For signed registers, convert to unsigned 16-bit
+                    is_signed = False
+                    if (
+                        hasattr(register_def, "data_type")
+                        and register_def.data_type is not None
+                    ):
+                        is_signed = getattr(register_def.data_type, "signed", False)
+                    elif hasattr(register_def, "signed"):
+                        is_signed = register_def.signed
+
+                    if is_signed and value < 0:
                         value = value + 65536  # Convert to 2's complement
+
+                    # Ensure value is in valid 16-bit range
+                    value = max(0, min(65535, value))
             else:
                 value = 0  # Default for undefined registers
 

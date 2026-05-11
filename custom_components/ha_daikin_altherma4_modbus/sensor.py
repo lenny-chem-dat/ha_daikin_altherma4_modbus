@@ -10,7 +10,6 @@ from .common import (
     get_register_value,
     is_entity_available,
     is_unavailable_value,
-    to_signed_16bit,
 )
 from .config_entry_utils import entry_value
 from .const import DOMAIN
@@ -20,6 +19,7 @@ from .register_constants import (
     INPUT_DEVICE_INFO,
     INPUT_REGISTERS,
 )
+from .register_types import TEXT16
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,8 +42,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         address = item.address
         register_name = item.register_name
         unit = item.unit or ""
-        dtype = item.dtype or "uint16"
-        scale = item.scale or 1
+        # Get scale from data_type or fall back to item.scale for backward compatibility
+        if hasattr(item, "data_type") and item.data_type is not None:
+            scale = getattr(item.data_type, "scaling", 1)
+        else:
+            scale = getattr(item, "scale", 1)
         count = item.count or 1
         icon = item.icon or "mdi:information"
         enum_map = item.enum_map
@@ -51,13 +54,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
         unique_id = item.unique_id or f"{DOMAIN}_{register_name}"
         translation_key = item.translation_key
 
+        data_type = item.data_type
+
         entities.append(
             DaikinInputSensor(
                 coordinator=unified_coordinator,
                 entry=entry,
                 address=address,
                 unit=unit,
-                dtype=dtype,
+                data_type=data_type,
                 scale=scale,
                 count=count,
                 icon=icon,
@@ -159,7 +164,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         entry,
         address,
         unit,
-        dtype,
+        data_type,
         scale,
         count,
         icon,
@@ -173,7 +178,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
-        self._dtype = dtype
+        self._data_type = data_type
         self._scale = scale
         self._count = count
         self._icon = icon
@@ -212,13 +217,14 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
             return None
 
         # Handle string data types directly
-        if self._dtype == "string":
+        if self._data_type is TEXT16:
             return str(val) if val is not None else None
 
         # Convert to appropriate type based on sensor characteristics
         try:
             # For scaled sensors, keep as float to preserve decimal places
-            if self._scale != 1:
+            scale = getattr(self._data_type, "scaling", 1) if self._data_type else 1
+            if scale != 1:
                 val = float(val)
             else:
                 val = int(val)
@@ -228,9 +234,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         # Return None for unavailable value (32765 or 32766)
         if is_unavailable_value(val):
             return None
-
-        # Convert unsigned 16-bit to signed integer safely
-        val = to_signed_16bit(val)
 
         # ENUM Mapping
         if self._enum_map:

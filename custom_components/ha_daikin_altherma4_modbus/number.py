@@ -10,7 +10,6 @@ from .common import (
     get_register_value,
     is_entity_available,
     safe_write_register,
-    to_unsigned_16bit,
 )
 from .const import DOMAIN
 from .register_constants import HOLDING_DEVICE_INFO, HOLDING_REGISTERS
@@ -38,7 +37,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         max_v = item.max_value
         step = item.step
         unit = item.unit or ""
-        scale = item.scale
+        data_type = item.data_type
         register_name = item.register_name
         enum_map = item.enum_map
         entity_category = item.entity_category
@@ -53,7 +52,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 max_v,
                 step,
                 unit,
-                scale,
+                data_type,
                 register_name,
                 enum_map,
                 entity_category,
@@ -77,11 +76,12 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         max_v,
         step,
         unit,
-        scale,
-        register_name,
+        data_type=None,
+        register_name=None,
         enum_map=None,
         entity_category=None,
         translation_key=None,
+        scale=None,
     ):
         super().__init__(coordinator)
 
@@ -100,7 +100,15 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         self._attr_device_info = HOLDING_DEVICE_INFO
         self._attr_translation_key = translation_key
         self._enum_map = enum_map
-        self._scale = scale
+        self._data_type = data_type
+        # Handle scale: prefer explicit scale param, then data_type.scaling, then fallback to 1
+        if scale is not None:
+            self._scale = scale
+        elif data_type is not None:
+            # Support both RegisterDataType objects and numeric values
+            self._scale = getattr(data_type, "scaling", data_type) if data_type else 1
+        else:
+            self._scale = 1
         self._coordinator: Any = coordinator  # For writing operations - coordinator has data_manager attribute
 
     @property
@@ -151,52 +159,50 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         return "slider"
 
     async def async_set_native_value(self, value):
-        raw = int(value / self._scale)
+        # Use pre-computed scale from __init__
+        scale = self._scale
+        raw = int(value / scale)
 
-        # Get register configuration for dynamic handling
+        # Get register configuration for range clamping
         register_config = get_register_config(self._register_name)
-        
-        # Enhanced debug logging for all register conversions
+
+        # Enhanced debug logging
         _LOGGER.debug(
-            f"DEBUG: {self._register_name} conversion - input: {value}, scale: {self._scale}, "
-            f"raw_value: {raw}, dtype: {register_config.dtype if register_config else 'unknown'}"
+            f"DEBUG: {self._register_name} conversion - input: {value}, scale: {scale}, "
+            f"raw_value: {raw}, data_type: {register_config.data_type.name if register_config and register_config.data_type else 'unknown'}"
         )
 
-        # Handle different register types dynamically based on configuration
-        if register_config:
-            if register_config.dtype == "int16":
-                # Handle signed 16-bit registers
-                if hasattr(register_config, 'min_value') and hasattr(register_config, 'max_value'):
-                    # Clamp to device-specific range
-                    min_raw = int(register_config.min_value / register_config.scale) if register_config.scale != 0 else register_config.min_value
-                    max_raw = int(register_config.max_value / register_config.scale) if register_config.scale != 0 else register_config.max_value
-                    raw = max(min_raw, min(max_raw, raw))
-                    _LOGGER.debug(f"DEBUG: {self._register_name} clamped to device range {register_config.min_value}-{register_config.max_value}: {raw}")
-                else:
-                    # Clamp to signed 16-bit range
-                    raw = max(-32768, min(32767, raw))
-                    _LOGGER.debug(f"DEBUG: {self._register_name} clamped to int16 range: {raw}")
-                
-                # Convert to unsigned 2's complement for Modbus transmission
-                if raw < 0:
-                    raw = raw + 65536
-                    _LOGGER.debug(f"DEBUG: {self._register_name} two's complement conversion: {raw}")
-            elif register_config.dtype == "uint16":
-                # Handle unsigned 16-bit registers
-                if hasattr(register_config, 'min_value') and hasattr(register_config, 'max_value'):
-                    # Clamp to device-specific range
-                    min_raw = int(register_config.min_value / register_config.scale) if register_config.scale != 0 else register_config.min_value
-                    max_raw = int(register_config.max_value / register_config.scale) if register_config.scale != 0 else register_config.max_value
-                    raw = max(min_raw, min(max_raw, raw))
-                    _LOGGER.debug(f"DEBUG: {self._register_name} clamped to device range {register_config.min_value}-{register_config.max_value}: {raw}")
-                else:
-                    # Clamp to unsigned 16-bit range
-                    raw = max(0, min(65535, raw))
-                    _LOGGER.debug(f"DEBUG: {self._register_name} clamped to uint16 range: {raw}")
+        # Apply range clamping based on register configuration
+        if (
+            register_config
+            and hasattr(register_config, "min_value")
+            and hasattr(register_config, "max_value")
+        ):
+            # Use scale from register_config.data_type for clamping
+            config_scale = 1
+            if register_config.data_type:
+                config_scale = getattr(register_config.data_type, "scaling", 1)
+            # Clamp to device-specific range
+            min_raw = (
+                int(register_config.min_value / config_scale)
+                if config_scale != 0
+                else register_config.min_value
+            )
+            max_raw = (
+                int(register_config.max_value / config_scale)
+                if config_scale != 0
+                else register_config.max_value
+            )
+            raw = max(min_raw, min(max_raw, raw))
+            _LOGGER.debug(
+                f"DEBUG: {self._register_name} clamped to device range {register_config.min_value}-{register_config.max_value}: {raw}"
+            )
         else:
-            # Fallback: Convert signed integer to unsigned 16-bit safely
-            raw = to_unsigned_16bit(raw)
-            _LOGGER.debug(f"DEBUG: {self._register_name} fallback conversion: {raw}")
+            # Clamp to 16-bit range (signed conversion handled by RegisterRepository)
+            raw = max(-32768, min(65535, raw))
+            _LOGGER.debug(
+                f"DEBUG: {self._register_name} clamped to 16-bit range: {raw}"
+            )
 
         _LOGGER.debug(f"DEBUG: {self._register_name} final raw value: {raw}")
 

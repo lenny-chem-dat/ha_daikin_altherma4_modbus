@@ -36,10 +36,16 @@ class OneBasedModbusResponse:
         self.is_bits = is_bits
         # Track logged unavailable values to prevent spam
         self._logged_unavailable = set()
+        # Cache for computed results to avoid repeated calculations
+        self._registers_cache = None
+        self._bits_cache = None
 
     @property
     def registers(self):
         """Return 1-based register array."""
+        if self._registers_cache is not None:
+            return self._registers_cache
+
         if hasattr(self.original_response, "registers"):
             # Size dynamically by requested start + returned payload length.
             payload_len = len(self.original_response.registers)
@@ -58,15 +64,17 @@ class OneBasedModbusResponse:
                         )
                         self._logged_unavailable.add(address_key)
 
-            _LOGGER.debug(
-                f"OneBasedModbusResponse: start_address={self.start_address}, len={len(self.original_response.registers)}, result_len={len(result)}"
-            )
             return result
-        return [32766]  # Default with dummy element
+        else:
+            self._registers_cache = [32766]  # Default with dummy element
+            return self._registers_cache
 
     @property
     def bits(self):
         """Return 1-based bit array."""
+        if self._bits_cache is not None:
+            return self._bits_cache
+
         if hasattr(self.original_response, "bits"):
             # Size dynamically by requested start + returned payload length.
             payload_len = len(self.original_response.bits)
@@ -77,8 +85,11 @@ class OneBasedModbusResponse:
             for i, value in enumerate(self.original_response.bits):
                 result[self.start_address + i] = value
 
+            self._bits_cache = result
             return result
-        return [False]  # Default with dummy element
+        else:
+            self._bits_cache = [False]  # Default with dummy element
+            return self._bits_cache
 
     def is_error(self):
         """Check if the original response is an error."""
@@ -299,8 +310,8 @@ class RealModbusTcpClient(ModbusClientInterface):
                 result = await self._client.write_register(address - 1, value)
                 if self._is_modbus_error(result):
                     # Log detailed Modbus exception information for debugging
-                    exception_code = getattr(result, 'exception_code', 'unknown')
-                    function_code = getattr(result, 'function_code', 'unknown')
+                    exception_code = getattr(result, "exception_code", "unknown")
+                    function_code = getattr(result, "function_code", "unknown")
                     _LOGGER.error(
                         f"Modbus device error writing holding register {address}: "
                         f"Exception code: {exception_code}, Function code: {function_code}"

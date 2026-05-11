@@ -157,11 +157,40 @@ def _load_sensor_module(monkeypatch):
             for k, v in kwargs.items():
                 setattr(self, k, v)
 
+    class BIT:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
     register_types_module.SensorRegister = SensorRegister
     register_types_module.CalculatedRegister = CalculatedRegister
     register_types_module.NumberRegister = NumberRegister
     register_types_module.SelectRegister = SelectRegister
     register_types_module.SwitchRegister = SwitchRegister
+    register_types_module.BIT = BIT
+
+    # Add register type constants with proper attributes
+    class MockRegisterDataType:
+        def __init__(self, name, signed, bits, scaling, range=None):
+            self.name = name
+            self.signed = signed
+            self.bits = bits
+            self.scaling = scaling
+            self.range = range
+
+    register_types_module.RegisterDataType = MockRegisterDataType
+    register_types_module.TEMP16 = MockRegisterDataType(
+        "Temp16", True, 16, 0.01, (-327.68, 327.67)
+    )
+    register_types_module.INT16 = MockRegisterDataType(
+        "Int16", True, 16, 1, (-32768, 32767)
+    )
+    register_types_module.TEXT16 = MockRegisterDataType("Text16", False, 16, 1, None)
+    register_types_module.POW16 = MockRegisterDataType(
+        "Pow16", True, 16, 0.01, (-327.68, 327.67)
+    )
+    register_types_module.BIT = MockRegisterDataType("Bit", False, 1, 1, (0, 1))
+
     monkeypatch.setitem(sys.modules, register_types_name, register_types_module)
 
     # Create const module
@@ -180,8 +209,7 @@ def _load_sensor_module(monkeypatch):
             input_type="input",
             register_name="input_49",
             unit="L/min",
-            scale=0.01,
-            dtype="uint16",
+            data_type=register_types_module.POW16,
         ),
         SensorRegister(
             name="Leaving water temperature PHE",
@@ -189,8 +217,7 @@ def _load_sensor_module(monkeypatch):
             input_type="input",
             register_name="input_40",
             unit="°C",
-            scale=0.01,
-            dtype="uint16",
+            data_type=register_types_module.TEMP16,
         ),
         SensorRegister(
             name="Return water temperature",
@@ -198,8 +225,7 @@ def _load_sensor_module(monkeypatch):
             input_type="input",
             register_name="input_42",
             unit="°C",
-            scale=0.01,
-            dtype="uint16",
+            data_type=register_types_module.TEMP16,
         ),
         SensorRegister(
             name="Heat pump power consumption",
@@ -207,8 +233,7 @@ def _load_sensor_module(monkeypatch):
             input_type="input",
             register_name="input_51",
             unit="W",
-            scale=10,
-            dtype="uint16",
+            data_type=register_types_module.POW16,
         ),
     ]
     const_module.CALCULATED_SENSORS = [
