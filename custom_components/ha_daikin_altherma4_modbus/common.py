@@ -100,8 +100,6 @@ def update_value_if_changed(
         )
         return EntityStatePayload(value=raw_value, **kwargs)
 
-    # Value unchanged - return previous data for this specific sensor
-    _LOGGER.debug(f"{register_type} {unique_id} unchanged: {raw_value}")
     return prev_data
 
 
@@ -166,6 +164,7 @@ async def safe_write_register(
     value: Any,
     operation_name: str = "write",
     register_type: str = "register",
+    coordinator: Any = None,
 ) -> None:
     """Safely write to a register with standardized error handling.
 
@@ -175,22 +174,54 @@ async def safe_write_register(
         value: Value to write
         operation_name: Description of the operation for logging (e.g., "turn on", "set temperature")
         register_type: Type of register for error messages
+        coordinator: Optional coordinator to refresh on error to sync entity state
 
     Raises:
         HomeAssistantError: If the write operation fails
     """
     from homeassistant.exceptions import HomeAssistantError
 
+    # Enhanced debug logging for troubleshooting holding_58 write issues
+    _LOGGER.debug(
+        f"Attempting {operation_name} {register_type} {register_name} with value {value}"
+    )
+    if register_name == "holding_58":
+        _LOGGER.debug(
+            f"DEBUG: holding_58 write details - value: {value} (type: {type(value)})"
+        )
+
     try:
         await write_func(register_name, value)
         _LOGGER.debug(f"Successfully {operation_name} {register_type} {register_name}")
     except (ValueError, ConnectionError) as e:
         _LOGGER.error(f"Error {operation_name} {register_type} {register_name}: {e}")
+        # Enhanced error logging for holding_58
+        if register_name == "holding_58":
+            _LOGGER.error(
+                f"DEBUG: holding_58 failed - value: {value}, error type: {type(e).__name__}, error: {e}"
+            )
+        # Refresh coordinator to ensure entity state matches actual device state
+        if coordinator is not None:
+            try:
+                await coordinator.async_request_refresh()
+            except Exception as refresh_err:
+                _LOGGER.debug(f"Failed to refresh after write error: {refresh_err}")
         raise HomeAssistantError(
             f"Failed to {operation_name} {register_type} {register_name}: {e}"
         ) from e
     except Exception as e:
         _LOGGER.error(f"Error {operation_name} {register_type} {register_name}: {e}")
+        # Enhanced error logging for holding_58
+        if register_name == "holding_58":
+            _LOGGER.error(
+                f"DEBUG: holding_58 failed - value: {value}, error type: {type(e).__name__}, error: {e}"
+            )
+        # Refresh coordinator to ensure entity state matches actual device state
+        if coordinator is not None:
+            try:
+                await coordinator.async_request_refresh()
+            except Exception as refresh_err:
+                _LOGGER.debug(f"Failed to refresh after write error: {refresh_err}")
         raise HomeAssistantError(
             f"Failed to {operation_name} {register_type} {register_name}"
         ) from e
@@ -290,3 +321,28 @@ def clamp_16bit(value: int) -> int:
         Value clamped to 0-65535 range
     """
     return max(0, min(65535, value))
+
+
+def get_register_config(register_name: str, register_list=None):
+    """
+    Get register configuration dynamically from register lists.
+
+    Args:
+        register_name: Name of the register to find
+        register_list: List of registers to search (defaults to HOLDING_REGISTERS)
+
+    Returns:
+        Register configuration object or None if not found
+    """
+    if register_list is None:
+        from .register_constants import HOLDING_REGISTERS
+
+        register_list = HOLDING_REGISTERS
+
+    for register in register_list:
+        if (
+            hasattr(register, "register_name")
+            and register.register_name == register_name
+        ):
+            return register
+    return None

@@ -157,11 +157,46 @@ def _load_sensor_module(monkeypatch):
             for k, v in kwargs.items():
                 setattr(self, k, v)
 
+    class BIT:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
     register_types_module.SensorRegister = SensorRegister
     register_types_module.CalculatedRegister = CalculatedRegister
     register_types_module.NumberRegister = NumberRegister
     register_types_module.SelectRegister = SelectRegister
     register_types_module.SwitchRegister = SwitchRegister
+    register_types_module.BIT = BIT
+
+    # Add register type constants with proper attributes
+    class MockRegisterDataType:
+        def __init__(self, name, signed, bits, scaling, range=None):
+            self.name = name
+            self.signed = signed
+            self.bits = bits
+            self.scaling = scaling
+            self.range = range
+
+    register_types_module.RegisterDataType = MockRegisterDataType
+    register_types_module.TEMP16 = MockRegisterDataType(
+        "Temp16", True, 16, 0.01, (-327.68, 327.67)
+    )
+    register_types_module.INT16 = MockRegisterDataType(
+        "Int16", True, 16, 1, (-32768, 32767)
+    )
+    register_types_module.INT16S100 = MockRegisterDataType(
+        "Int16", True, 16, 0.01, (-32768, 32767)
+    )
+    register_types_module.TEXT16 = MockRegisterDataType("Text16", False, 16, 1, None)
+    register_types_module.POW16 = MockRegisterDataType(
+        "Pow16", True, 16, 0.01, (-327.68, 327.67)
+    )
+    register_types_module.BIT = MockRegisterDataType("Bit", False, 1, 1, (0, 1))
+    register_types_module.TIMESTAMP16 = MockRegisterDataType(
+        "Timestamp16", True, 16, 1, (-32768, 32767)
+    )
+
     monkeypatch.setitem(sys.modules, register_types_name, register_types_module)
 
     # Create const module
@@ -180,8 +215,7 @@ def _load_sensor_module(monkeypatch):
             input_type="input",
             register_name="input_49",
             unit="L/min",
-            scale=0.01,
-            dtype="uint16",
+            data_type=register_types_module.POW16,
         ),
         SensorRegister(
             name="Leaving water temperature PHE",
@@ -189,8 +223,7 @@ def _load_sensor_module(monkeypatch):
             input_type="input",
             register_name="input_40",
             unit="°C",
-            scale=0.01,
-            dtype="uint16",
+            data_type=register_types_module.TEMP16,
         ),
         SensorRegister(
             name="Return water temperature",
@@ -198,8 +231,7 @@ def _load_sensor_module(monkeypatch):
             input_type="input",
             register_name="input_42",
             unit="°C",
-            scale=0.01,
-            dtype="uint16",
+            data_type=register_types_module.TEMP16,
         ),
         SensorRegister(
             name="Heat pump power consumption",
@@ -207,8 +239,7 @@ def _load_sensor_module(monkeypatch):
             input_type="input",
             register_name="input_51",
             unit="W",
-            scale=10,
-            dtype="uint16",
+            data_type=register_types_module.POW16,
         ),
     ]
     const_module.CALCULATED_SENSORS = [
@@ -276,7 +307,9 @@ def test_cop_sensor_with_external_power_sensor(monkeypatch):
     # Setup: heat_power = 3500W, electric_power = 1000W -> CoP = 3.5
     # Flow = 10 L/min, delta_T = 5K -> heat_power = 10 * 5 * 70 = 3500W
     states = {
-        "sensor.external_power": SimpleNamespace(state="1000"),
+        "sensor.external_power": SimpleNamespace(
+            state="1000", attributes={"unit_of_measurement": "W"}
+        ),
     }
     hass = SimpleNamespace(
         states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
@@ -319,7 +352,7 @@ def test_cop_sensor_with_modbus_power_data(monkeypatch):
             "input_49": {"value": 10.0},  # Flow = 10 L/min (already scaled)
             "input_40": {"value": 45.0},  # Temp = 45°C (already scaled)
             "input_42": {"value": 40.0},  # Temp = 40°C (already scaled)
-            "input_51": {"value": 1000.0},  # Power = 1000W (already scaled)
+            "input_51": {"value": 1.0},  # Power = 1.0 kW = 1000W (already scaled)
         },
     )
 
@@ -341,7 +374,9 @@ def test_cop_sensor_returns_none_when_heat_power_is_zero(monkeypatch):
     sensor_module = _load_sensor_module(monkeypatch)
 
     states = {
-        "sensor.external_power": SimpleNamespace(state="1000"),
+        "sensor.external_power": SimpleNamespace(
+            state="1000", attributes={"unit_of_measurement": "W"}
+        ),
     }
     hass = SimpleNamespace(
         states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
@@ -381,7 +416,9 @@ def test_cop_sensor_returns_none_when_electric_power_is_zero(monkeypatch):
     sensor_module = _load_sensor_module(monkeypatch)
 
     states = {
-        "sensor.external_power": SimpleNamespace(state="0"),
+        "sensor.external_power": SimpleNamespace(
+            state="0", attributes={"unit_of_measurement": "W"}
+        ),
     }
     hass = SimpleNamespace(
         states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
@@ -422,7 +459,9 @@ def test_cop_sensor_returns_none_when_external_sensor_unavailable(monkeypatch):
 
     # External sensor returns unavailable
     states = {
-        "sensor.external_power": SimpleNamespace(state="unavailable"),
+        "sensor.external_power": SimpleNamespace(
+            state="unavailable", attributes={"unit_of_measurement": "W"}
+        ),
     }
     hass = SimpleNamespace(
         states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
@@ -477,8 +516,8 @@ def test_cop_sensor_with_unscaled_modbus_data(monkeypatch):
                 "value": 40.0
             },  # No scale stored in data, but value is already scaled
             "input_51": {
-                "value": 1000.0
-            },  # No scale stored in data, but value is already scaled
+                "value": 1.0
+            },  # No scale stored in data, but value is already scaled (1.0 kW = 1000W)
         },
     )
 
@@ -504,7 +543,9 @@ def test_cop_sensor_rounds_to_two_decimals(monkeypatch):
     sensor_module = _load_sensor_module(monkeypatch)
 
     states = {
-        "sensor.external_power": SimpleNamespace(state="1175"),
+        "sensor.external_power": SimpleNamespace(
+            state="1175", attributes={"unit_of_measurement": "W"}
+        ),
     }
     hass = SimpleNamespace(
         states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
@@ -545,7 +586,9 @@ def test_cop_sensor_with_legacy_entry_data(monkeypatch):
     sensor_module = _load_sensor_module(monkeypatch)
 
     states = {
-        "sensor.legacy_power": SimpleNamespace(state="500"),
+        "sensor.legacy_power": SimpleNamespace(
+            state="500", attributes={"unit_of_measurement": "W"}
+        ),
     }
     hass = SimpleNamespace(
         states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))

@@ -10,7 +10,6 @@ from .common import (
     get_register_value,
     is_entity_available,
     is_unavailable_value,
-    to_signed_16bit,
 )
 from .config_entry_utils import entry_value
 from .const import DOMAIN
@@ -20,6 +19,7 @@ from .register_constants import (
     INPUT_DEVICE_INFO,
     INPUT_REGISTERS,
 )
+from .register_types import TEXT16
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,8 +42,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
         address = item.address
         register_name = item.register_name
         unit = item.unit or ""
-        dtype = item.dtype or "uint16"
-        scale = item.scale or 1
         count = item.count or 1
         icon = item.icon or "mdi:information"
         enum_map = item.enum_map
@@ -51,14 +49,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
         unique_id = item.unique_id or f"{DOMAIN}_{register_name}"
         translation_key = item.translation_key
 
+        data_type = item.data_type
+
         entities.append(
             DaikinInputSensor(
                 coordinator=unified_coordinator,
                 entry=entry,
                 address=address,
                 unit=unit,
-                dtype=dtype,
-                scale=scale,
+                data_type=data_type,
                 count=count,
                 icon=icon,
                 enum_map=enum_map,
@@ -159,8 +158,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         entry,
         address,
         unit,
-        dtype,
-        scale,
+        data_type,
         count,
         icon,
         enum_map,
@@ -173,8 +171,9 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
-        self._dtype = dtype
-        self._scale = scale
+        self._data_type = data_type
+        # Scale only from register_types (data_type.scaling)
+        self._scale = getattr(data_type, "scaling", 1) if data_type else 1
         self._count = count
         self._icon = icon
         self._enum_map = enum_map
@@ -212,13 +211,14 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
             return None
 
         # Handle string data types directly
-        if self._dtype == "string":
+        if self._data_type is TEXT16:
             return str(val) if val is not None else None
 
         # Convert to appropriate type based on sensor characteristics
         try:
             # For scaled sensors, keep as float to preserve decimal places
-            if self._scale != 1:
+            scale = getattr(self._data_type, "scaling", 1) if self._data_type else 1
+            if scale != 1:
                 val = float(val)
             else:
                 val = int(val)
@@ -228,9 +228,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         # Return None for unavailable value (32765 or 32766)
         if is_unavailable_value(val):
             return None
-
-        # Convert unsigned 16-bit to signed integer safely
-        val = to_signed_16bit(val)
 
         # ENUM Mapping
         if self._enum_map:
@@ -364,9 +361,17 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         if electric_power_sensor:
             # Externer Sensor
             state = self.coordinator.hass.states.get(electric_power_sensor)
+            unit = (
+                getattr(state, "attributes", {}).get("unit_of_measurement")
+                if state
+                else None
+            )
             if state and state.state not in [None, "unknown", "unavailable"]:
                 try:
-                    electric_power = float(state.state)
+                    if unit == "kW":
+                        electric_power = float(state.state) * 1000
+                    else:
+                        electric_power = float(state.state)
                 except ValueError:
                     electric_power = None
             else:
@@ -379,7 +384,9 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
             from .const import REGISTER_HEAT_PUMP_POWER
 
             power_data = self.coordinator.data.get(REGISTER_HEAT_PUMP_POWER, {})
-            electric_power = get_register_value(power_data) or 0  # in W
+            electric_power = get_register_value(power_data) or 0  # in kW
+            # Convert kW to W for consistent calculation
+            electric_power = electric_power * 1000
 
         if electric_power and electric_power > 0 and heat_power > 0:
             # Beide Leistungen in W, direkte Berechnung

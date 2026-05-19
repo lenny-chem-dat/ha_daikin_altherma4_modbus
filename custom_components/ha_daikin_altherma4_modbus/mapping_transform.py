@@ -75,7 +75,20 @@ class ModbusMappingTransform:
         description = processed_item.description
         item = processed_item.item
 
-        scale = getattr(item, "scale", 1)
+        # Apply signed conversion if register is signed
+        from .common import to_signed_16bit
+
+        if (
+            hasattr(item, "data_type")
+            and item.data_type is not None
+            and getattr(item.data_type, "signed", False)
+        ):
+            raw_value = to_signed_16bit(raw_value)
+
+        # Scale only from register_types (data_type.scaling)
+        scale = 1
+        if hasattr(item, "data_type") and item.data_type is not None:
+            scale = getattr(item.data_type, "scaling", 1)
 
         if scale is not None and scale != 1:
             if raw_value == 32765 or raw_value == 32766:

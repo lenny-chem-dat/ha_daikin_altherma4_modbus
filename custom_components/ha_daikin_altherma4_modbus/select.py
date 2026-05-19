@@ -137,6 +137,7 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
                         key,
                         operation_name="set option for",
                         register_type="select",
+                        coordinator=self._coordinator,
                     )
                 else:
                     raise HomeAssistantError(

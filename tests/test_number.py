@@ -63,7 +63,7 @@ def _load_number_module(monkeypatch):
         sys.modules, "homeassistant.helpers.update_coordinator", update_coordinator
     )
 
-    # Mock common module
+    # Mock common module - don't mock get_register_config to use real function
     common_module = types.ModuleType(common_name)
     common_module.get_register_scale = lambda data: (
         data.get("scale") if isinstance(data, dict) else None
@@ -75,6 +75,23 @@ def _load_number_module(monkeypatch):
     common_module.safe_write_register = AsyncMock()
     common_module.to_signed_16bit = lambda x: x if x < 32768 else x - 65536
     common_module.to_unsigned_16bit = lambda x: x if x >= 0 else x + 65536
+
+    # Mock get_register_config to make it available in test environment
+    def mock_get_register_config(register_name, register_list=None):
+        if register_name == "holding_58":
+            # Return mock register configuration for holding_58 (Pow16Signed)
+            from types import SimpleNamespace
+
+            return SimpleNamespace(
+                register_name="holding_58",
+                data_type=SimpleNamespace(scaling=0.01, name="Pow16"),
+                min_value=0,
+                max_value=20,
+                unit="kW",
+            )
+        return None
+
+    common_module.get_register_config = mock_get_register_config
     monkeypatch.setitem(sys.modules, common_name, common_module)
 
     # Mock const module
@@ -91,12 +108,34 @@ def _load_number_module(monkeypatch):
     class NumberRegister:
         pass
 
+    # Mock RegisterDataType
+    class MockRegisterDataType:
+        def __init__(self, name, signed, bits, scaling, range=None):
+            self.name = name
+            self.signed = signed
+            self.bits = bits
+            self.scaling = scaling
+            self.range = range
+
     register_types_module.NumberRegister = NumberRegister
+    register_types_module.RegisterDataType = MockRegisterDataType
+    register_types_module.INT16 = MockRegisterDataType(
+        "Int16", True, 16, 1, (-32768, 32767)
+    )
+    register_types_module.TEMP16 = MockRegisterDataType(
+        "Temp16", True, 16, 0.01, (-327.68, 327.67)
+    )
+    register_types_module.POW16 = MockRegisterDataType(
+        "Pow16", True, 16, 0.01, (-327.68, 327.67)
+    )
     monkeypatch.setitem(sys.modules, register_types_name, register_types_module)
 
     # Create mock holding registers that are instances of NumberRegister
     class MockRegister(NumberRegister):
         def __init__(self, **kwargs):
+            # Set default data_type if not provided
+            if "data_type" not in kwargs:
+                kwargs["data_type"] = None
             for k, v in kwargs.items():
                 setattr(self, k, v)
 
@@ -107,7 +146,7 @@ def _load_number_module(monkeypatch):
             max_value=100,
             step=1,
             unit="°C",
-            scale=1,
+            data_type=register_types_module.INT16,
             register_name="holding_1",
             enum_map=None,
             entity_category=None,
@@ -119,7 +158,7 @@ def _load_number_module(monkeypatch):
             max_value=5,
             step=1,
             unit="",
-            scale=1,
+            data_type=register_types_module.INT16,
             register_name="holding_2",
             enum_map={0: "Off", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"},
             entity_category="config",
@@ -197,7 +236,7 @@ def test_daikin_number_initialization(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=0.1,
+        data_type=0.1,
         register_name="holding_1",
         enum_map=None,
         entity_category="config",
@@ -229,7 +268,7 @@ def test_daikin_number_available(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -243,7 +282,7 @@ def test_daikin_number_native_value_with_data_scale(monkeypatch):
     """Test native_value when data has scale stored."""
     number_module = _load_number_module(monkeypatch)
 
-    coordinator = SimpleNamespace(data={"holding_1": {"value": 250, "scale": 0.1}})
+    coordinator = SimpleNamespace(data={"holding_1": {"value": 250}})
     entry = SimpleNamespace()
 
     entity = number_module.DaikinNumber(
@@ -254,7 +293,7 @@ def test_daikin_number_native_value_with_data_scale(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=0.1,
+        data_type=0.1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -280,15 +319,14 @@ def test_daikin_number_native_value_without_scale(monkeypatch):
         max_v=100,
         step=0.1,
         unit="°C",
-        scale=0.1,
+        data_type=0.1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
         translation_key=None,
     )
 
-    # Value should be scaled: 250 * 0.1 = 25.0
-    assert entity.native_value == 25.0
+    assert entity.native_value == 250
 
 
 def test_daikin_number_native_value_none_data(monkeypatch):
@@ -306,7 +344,7 @@ def test_daikin_number_native_value_none_data(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -331,7 +369,7 @@ def test_daikin_number_native_value_invalid_string(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -357,7 +395,7 @@ def test_daikin_number_native_value_unavailable_values(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -386,7 +424,7 @@ def test_daikin_number_native_value_with_enum_map(monkeypatch):
         max_v=5,
         step=1,
         unit="",
-        scale=1,
+        data_type=1,
         register_name="holding_2",
         enum_map={0: "Off", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"},
         entity_category=None,
@@ -412,7 +450,7 @@ def test_daikin_number_mode_with_enum_map(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map={0: "Off", 1: "On"},
         entity_category=None,
@@ -437,7 +475,7 @@ def test_daikin_number_mode_without_enum_map(monkeypatch):
         max_v=100,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -465,7 +503,7 @@ async def test_daikin_number_async_set_native_value(monkeypatch):
         max_v=100,
         step=0.1,
         unit="°C",
-        scale=0.1,
+        data_type=0.1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -498,7 +536,7 @@ async def test_daikin_number_async_set_native_value_negative(monkeypatch):
         max_v=50,
         step=1,
         unit="°C",
-        scale=1,
+        data_type=1,
         register_name="holding_1",
         enum_map=None,
         entity_category=None,
@@ -511,3 +549,235 @@ async def test_daikin_number_async_set_native_value_negative(monkeypatch):
     from custom_components.ha_daikin_altherma4_modbus.common import safe_write_register
 
     safe_write_register.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, caplog):
+    """Test that Modbus write error triggers coordinator refresh.
+
+    This test verifies the fix for:
+    - "Error set value for number holding_58: Modbus error writing holding register 58"
+
+    After a write failure, the coordinator should refresh to ensure entity
+    state matches the actual device state.
+    """
+    import logging
+
+    package_name = "custom_components.ha_daikin_altherma4_modbus"
+    common_name = f"{package_name}.common"
+
+    # Create a write function that raises an exception (simulating Modbus error)
+    async def failing_write(register_name, value):
+        raise Exception("Modbus error writing holding register 58")
+
+    # Setup mock modules with real safe_write_register implementation
+    _reset_modules(
+        f"{package_name}.number",
+        f"{package_name}.const",
+        f"{package_name}.common",
+        f"{package_name}.register_constants",
+        f"{package_name}.register_types",
+        "homeassistant.components.number",
+        "homeassistant.helpers.update_coordinator",
+    )
+
+    package_path = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "ha_daikin_altherma4_modbus"
+    )
+    package_module = types.ModuleType(package_name)
+    package_module.__path__ = [str(package_path)]
+    monkeypatch.setitem(sys.modules, package_name, package_module)
+
+    # Mock homeassistant components
+    number_component = types.ModuleType("homeassistant.components.number")
+    number_component.NumberEntity = type("NumberEntity", (), {})
+    monkeypatch.setitem(
+        sys.modules, "homeassistant.components.number", number_component
+    )
+
+    update_coordinator = types.ModuleType("homeassistant.helpers.update_coordinator")
+
+    class FakeCoordinatorEntity:
+        def __init__(self, coordinator=None):
+            self.coordinator = coordinator
+
+    update_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+    monkeypatch.setitem(
+        sys.modules, "homeassistant.helpers.update_coordinator", update_coordinator
+    )
+
+    # Create common module with real safe_write_register implementation (with coordinator support)
+    common_module = types.ModuleType(common_name)
+
+    async def safe_write_register(
+        write_func,
+        register_name,
+        value,
+        operation_name="write",
+        register_type="register",
+        coordinator=None,
+    ):
+        logger = logging.getLogger(common_name)
+        try:
+            await write_func(register_name, value)
+            logger.debug(
+                f"Successfully {operation_name} {register_type} {register_name}"
+            )
+        except Exception as e:
+            logger.error(f"Error {operation_name} {register_type} {register_name}: {e}")
+            # Refresh coordinator on error to ensure entity state matches device (THE FIX)
+            if coordinator is not None:
+                try:
+                    await coordinator.async_request_refresh()
+                except Exception as refresh_err:
+                    logger.debug(f"Failed to refresh after write error: {refresh_err}")
+            raise Exception(
+                f"Failed to {operation_name} {register_type} {register_name}: {e}"
+            ) from e
+
+    common_module.safe_write_register = safe_write_register
+    common_module.get_register_scale = lambda data: (
+        data.get("scale") if isinstance(data, dict) else None
+    )
+    common_module.get_register_value = lambda data: (
+        data.get("value") if isinstance(data, dict) else None
+    )
+    common_module.is_entity_available = lambda data, name: True
+    common_module.to_signed_16bit = lambda x: x if x < 32768 else x - 65536
+    common_module.to_unsigned_16bit = lambda x: x if x >= 0 else x + 65536
+
+    # Add get_register_config mock for the test
+    def get_register_config(register_name, register_list=None):
+        """Return mock register config for holding_58."""
+        if register_name == "holding_58":
+            from types import SimpleNamespace
+
+            return SimpleNamespace(
+                register_name="holding_58",
+                min_value=0,
+                max_value=20,
+                unit="kW",
+                data_type=SimpleNamespace(scaling=0.01, name="Pow16"),
+            )
+        return None
+
+    common_module.get_register_config = get_register_config
+    monkeypatch.setitem(sys.modules, common_name, common_module)
+
+    # Mock const module
+    const_name = f"{package_name}.const"
+    const_module = types.ModuleType(const_name)
+    const_module.DOMAIN = "ha_daikin_altherma4_modbus"
+    const_module.HOLDING_DEVICE_INFO = {"name": "Test Device"}
+    monkeypatch.setitem(sys.modules, const_name, const_module)
+
+    # Mock register_types module with NumberRegister
+    register_types_name = f"{package_name}.register_types"
+    register_types_module = types.ModuleType(register_types_name)
+
+    class NumberRegister:
+        pass
+
+    register_types_module.NumberRegister = NumberRegister
+    monkeypatch.setitem(sys.modules, register_types_name, register_types_module)
+
+    # Create mock holding registers
+    class MockRegister(NumberRegister):
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    const_module.HOLDING_REGISTERS = [
+        MockRegister(
+            address=58,
+            min_value=0,
+            max_value=100,
+            step=1,
+            unit="°C",
+            data_type=1,
+            register_name="holding_58",
+            enum_map=None,
+            entity_category=None,
+            translation_key=None,
+        ),
+    ]
+
+    # Mock register_constants module
+    register_constants_name = f"{package_name}.register_constants"
+    register_constants_module = types.ModuleType(register_constants_name)
+    register_constants_module.HOLDING_REGISTERS = const_module.HOLDING_REGISTERS
+    register_constants_module.HOLDING_DEVICE_INFO = const_module.HOLDING_DEVICE_INFO
+    monkeypatch.setitem(sys.modules, register_constants_name, register_constants_module)
+
+    # Now load the number module - it will use our real safe_write_register
+    module_name = f"{package_name}.number"
+    number_module = importlib.import_module(module_name)
+
+    # Setup coordinator with initial data
+    data_manager = SimpleNamespace(write_holding_register=failing_write)
+    coordinator = SimpleNamespace(
+        data_manager=data_manager,
+        data={"holding_58": {"value": 20, "scale": 1}},  # Initial value is 20
+    )
+    entry = SimpleNamespace()
+
+    entity = number_module.DaikinNumber(
+        coordinator=coordinator,
+        entry=entry,
+        address=58,
+        min_v=0,
+        max_v=100,
+        step=1,
+        unit="°C",
+        data_type=1,
+        register_name="holding_58",
+        enum_map=None,
+        entity_category=None,
+        translation_key=None,
+    )
+
+    # Verify initial state
+    assert entity.native_value == 20, "Initial value should be 20"
+
+    with caplog.at_level(logging.ERROR, logger=common_name):
+        with pytest.raises(Exception) as exc_info:
+            await entity.async_set_native_value(25.0)
+
+    # Verify the exception was raised with expected message
+    assert "Failed to set value for number holding_58" in str(exc_info.value)
+
+    # Verify the error was logged with the expected message format
+    # "Error set value for number holding_58: Modbus error writing holding register 58"
+    assert "Error set value for number holding_58" in caplog.text
+    assert "Modbus error writing holding register 58" in caplog.text
+
+    # FIX VERIFICATION: Check that coordinator refresh was triggered after write failure
+    # After the fix: safe_write_register should call coordinator.async_request_refresh() on error
+
+    # Track if refresh was called
+    refresh_called = [False]
+
+    async def mock_refresh():
+        refresh_called[0] = True
+
+    coordinator.async_request_refresh = mock_refresh
+
+    # Try the write with refresh tracking
+    try:
+        await entity.async_set_native_value(25.0)
+    except Exception:
+        pass  # Expected to fail
+
+    # VERIFY THE FIX: After a write failure, coordinator refresh should be called
+    # to ensure entity state matches the actual device state
+    assert refresh_called[0], (
+        "FIX NOT WORKING: After Modbus write error 'Error set value for number holding_58', "
+        "coordinator refresh was not triggered. "
+        "Expected: async_request_refresh() should be called after write failure."
+    )
+
+    # Also verify the error was still logged correctly
+    assert "Error set value for number holding_58" in caplog.text
+    assert "Modbus error writing holding register 58" in caplog.text

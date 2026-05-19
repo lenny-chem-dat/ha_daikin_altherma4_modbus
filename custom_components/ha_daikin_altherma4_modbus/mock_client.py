@@ -78,11 +78,10 @@ class MockModbusTcpClient(ModbusClientInterface):
         self, address: int, value: int
     ) -> "MockModbusResponse":
         """Mock write holding register."""
-        # Convert 1-based address to 0-based for internal use
-        internal_address = address - 1
+        # Address is already 0-based (modbus_client.py converts it)
         # Update the mock data
-        if 0 <= internal_address < len(self._demo_data["holding_registers"]):
-            self._demo_data["holding_registers"][internal_address] = value
+        if 0 <= address < len(self._demo_data["holding_registers"]):
+            self._demo_data["holding_registers"][address] = value
         _LOGGER.debug(f"Mock write holding register {address} with value {value}")
         return MockModbusResponse([], 0, 0)  # Success response
 
@@ -90,11 +89,10 @@ class MockModbusTcpClient(ModbusClientInterface):
         self, address: int, value: bool
     ) -> "MockModbusResponse":
         """Mock write coil."""
-        # Convert 1-based address to 0-based for internal use
-        internal_address = address - 1
+        # Address is already 0-based (modbus_client.py converts it)
         # Update the mock data
-        if 0 <= internal_address < len(self._demo_data["coils"]):
-            self._demo_data["coils"][internal_address] = value
+        if 0 <= address < len(self._demo_data["coils"]):
+            self._demo_data["coils"][address] = value
         _LOGGER.debug(f"Mock write coil {address} with value {value}")
         return MockModbusResponse([], 0, 0)  # Success response
 
@@ -214,7 +212,13 @@ class MockModbusTcpClient(ModbusClientInterface):
                         value = 32766  # Default value
                 else:
                     # Generate value based on register definition
-                    scale = getattr(register_def, "scale", 1)
+                    # Scale only from register_types (data_type.scaling)
+                    scale = 1
+                    if (
+                        hasattr(register_def, "data_type")
+                        and register_def.data_type is not None
+                    ):
+                        scale = getattr(register_def.data_type, "scaling", 1)
                     min_val = (
                         register_def.min_value
                         if hasattr(register_def, "min_value")
@@ -299,7 +303,14 @@ class MockModbusTcpClient(ModbusClientInterface):
                         value = 0
                 else:
                     # Generate value based on register definition
-                    scale = getattr(register_def, "scale", 1)
+                    # Scale only from register_types (data_type.scaling)
+                    scale = 1
+                    if (
+                        hasattr(register_def, "data_type")
+                        and register_def.data_type is not None
+                    ):
+                        scale = getattr(register_def.data_type, "scaling", 1)
+
                     min_val = (
                         register_def.min_value
                         if hasattr(register_def, "min_value")
@@ -313,11 +324,25 @@ class MockModbusTcpClient(ModbusClientInterface):
 
                     # Generate scaled value within range
                     scaled_value = random.uniform(min_val, max_val)
-                    value = int(scaled_value / scale)
+                    value = (
+                        int(scaled_value / scale) if scale != 0 else int(scaled_value)
+                    )
 
-                    # For signed registers (dtype: int16), convert to unsigned 16-bit
-                    if register_def.dtype == "int16" and value < 0:
+                    # For signed registers, convert to unsigned 16-bit
+                    is_signed = False
+                    if (
+                        hasattr(register_def, "data_type")
+                        and register_def.data_type is not None
+                    ):
+                        is_signed = getattr(register_def.data_type, "signed", False)
+                    elif hasattr(register_def, "signed"):
+                        is_signed = register_def.signed
+
+                    if is_signed and value < 0:
                         value = value + 65536  # Convert to 2's complement
+
+                    # Ensure value is in valid 16-bit range
+                    value = max(0, min(65535, value))
             else:
                 value = 0  # Default for undefined registers
 

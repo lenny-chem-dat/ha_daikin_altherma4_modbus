@@ -25,7 +25,7 @@ REGISTER_OFFSET_HEATING = (
     "holding_54"  # Weather-dependent mode Main LWT Heating setpoint offset
 )
 REGISTER_OFFSET_COOLING = (
-    "holding_53"  # Weather-dependent mode Main LWT Cooling setpoint offset
+    "holding_55"  # Weather-dependent mode Main LWT Cooling setpoint offset
 )
 
 # Additional register constants for Daikin Altherma 4
