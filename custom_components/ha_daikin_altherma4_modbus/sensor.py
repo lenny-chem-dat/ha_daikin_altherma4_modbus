@@ -361,7 +361,11 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         if electric_power_sensor:
             # Externer Sensor
             state = self.coordinator.hass.states.get(electric_power_sensor)
-            unit = getattr(state, 'attributes', {}).get('unit_of_measurement') if state else None
+            unit = (
+                getattr(state, "attributes", {}).get("unit_of_measurement")
+                if state
+                else None
+            )
             if state and state.state not in [None, "unknown", "unavailable"]:
                 try:
                     if unit == "kW":

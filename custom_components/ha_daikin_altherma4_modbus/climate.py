@@ -469,9 +469,7 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
     @property
     def target_temperature(self):
         """Return target temperature."""
-        return self._get_register_value(
-            self._setpoint_register, HOLDING_REGISTERS
-        )
+        return self._get_register_value(self._setpoint_register, HOLDING_REGISTERS)
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set HVAC mode."""
