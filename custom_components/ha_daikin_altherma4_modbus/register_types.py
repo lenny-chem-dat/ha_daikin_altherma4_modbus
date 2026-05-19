@@ -15,9 +15,11 @@ __all__ = [
     "CalculatedRegister",
     "TEMP16",
     "INT16",
+    "INT16S100",
     "TEXT16",
     "POW16",
     "BIT",
+    "TIMESTAMP16",
 ]
 
 
@@ -41,6 +43,10 @@ INT16 = RegisterDataType(
     name="Int16", signed=True, bits=16, scaling=1, range=(-32768, 32767)
 )
 
+INT16S100 = RegisterDataType(
+    name="Int16", signed=True, bits=16, scaling=0.01, range=(-32768, 32767)
+)
+
 TEXT16 = RegisterDataType(name="Text16", signed=False, bits=16, scaling=1, range=None)
 
 POW16 = RegisterDataType(
@@ -48,6 +54,10 @@ POW16 = RegisterDataType(
 )
 
 BIT = RegisterDataType(name="Bit", signed=False, bits=1, scaling=1, range=(0, 1))
+
+TIMESTAMP16 = RegisterDataType(
+    name="Timestamp16", signed=False, bits=16, scaling=1, range=(0, 65535)
+)
 
 
 @dataclass
@@ -58,7 +68,7 @@ class RegisterDefinition:
     address: int
     input_type: str
     register_name: str
-    data_type: Optional[RegisterDataType] = None
+    data_type: RegisterDataType
     calc_type: Optional[str] = None  # For calculated registers
     trigger_register_name: Optional[str] = None  # For calculated registers
 
@@ -68,6 +78,7 @@ class RegisterDefinition:
     icon: Optional[str] = None
     translation_key: Optional[str] = None
     entity_category: Optional[EntityCategory] = None
+    step: Optional[Union[int, float]] = None
 
 
 @dataclass

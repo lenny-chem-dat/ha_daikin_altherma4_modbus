@@ -85,11 +85,10 @@ class ModbusMappingTransform:
         ):
             raw_value = to_signed_16bit(raw_value)
 
-        # Get scale from data_type or fall back to item scale for backward compatibility
+        # Scale only from register_types (data_type.scaling)
+        scale = 1
         if hasattr(item, "data_type") and item.data_type is not None:
             scale = getattr(item.data_type, "scaling", 1)
-        else:
-            scale = getattr(item, "scale", 1)
 
         if scale is not None and scale != 1:
             if raw_value == 32765 or raw_value == 32766:

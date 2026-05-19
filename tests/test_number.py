@@ -282,7 +282,7 @@ def test_daikin_number_native_value_with_data_scale(monkeypatch):
     """Test native_value when data has scale stored."""
     number_module = _load_number_module(monkeypatch)
 
-    coordinator = SimpleNamespace(data={"holding_1": {"value": 250, "scale": 0.1}})
+    coordinator = SimpleNamespace(data={"holding_1": {"value": 250}})
     entry = SimpleNamespace()
 
     entity = number_module.DaikinNumber(
@@ -326,8 +326,7 @@ def test_daikin_number_native_value_without_scale(monkeypatch):
         translation_key=None,
     )
 
-    # Value should be scaled: 250 * 0.1 = 25.0
-    assert entity.native_value == 25.0
+    assert entity.native_value == 250
 
 
 def test_daikin_number_native_value_none_data(monkeypatch):

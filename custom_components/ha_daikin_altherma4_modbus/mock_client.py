@@ -212,7 +212,13 @@ class MockModbusTcpClient(ModbusClientInterface):
                         value = 32766  # Default value
                 else:
                     # Generate value based on register definition
-                    scale = getattr(register_def, "scale", 1)
+                    # Scale only from register_types (data_type.scaling)
+                    scale = 1
+                    if (
+                        hasattr(register_def, "data_type")
+                        and register_def.data_type is not None
+                    ):
+                        scale = getattr(register_def.data_type, "scaling", 1)
                     min_val = (
                         register_def.min_value
                         if hasattr(register_def, "min_value")
@@ -297,15 +303,13 @@ class MockModbusTcpClient(ModbusClientInterface):
                         value = 0
                 else:
                     # Generate value based on register definition
-                    # Get scale from data_type.scaling if available
+                    # Scale only from register_types (data_type.scaling)
                     scale = 1
                     if (
                         hasattr(register_def, "data_type")
                         and register_def.data_type is not None
                     ):
                         scale = getattr(register_def.data_type, "scaling", 1)
-                    else:
-                        scale = getattr(register_def, "scale", 1)
 
                     min_val = (
                         register_def.min_value

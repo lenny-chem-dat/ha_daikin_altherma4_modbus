@@ -53,28 +53,6 @@ from .register_constants import (
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_scale_from_config(unique_id, register_list):
-    """Get scale factor for a register by unique_id from const.py."""
-    # Try to get scale directly from coordinator data first
-    if hasattr(register_list, "coordinator") and register_list.coordinator:
-        # Create address_name without DOMAIN prefix for coordinator.data access
-        if unique_id.startswith(f"{DOMAIN}_"):
-            address_name = unique_id[len(f"{DOMAIN}_") :]
-        else:
-            address_name = unique_id
-        data = register_list.coordinator.data.get(address_name, {})
-        if "scale" in data:
-            return data["scale"]
-
-    # Fallback to original loop method - handle dataclass instances
-    for register in register_list:
-        # Access attributes directly for dataclass instances
-        register_unique_id = getattr(register, "unique_id", None)
-        if register_unique_id == unique_id:
-            return getattr(register, "scale", 1)
-    return 1  # Default scale if not found
-
-
 class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     """Climate Entity for Daikin Altherma 4 Thermostat Control."""
 
@@ -128,8 +106,8 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
             # Value is already scaled by data_manager
             temp = temp_raw
         else:
-            # Value is not scaled yet, apply scaling
-            temp = temp_raw * (get_register_scale(temp_data) or 0.01)  # °C
+            # Value is not scaled yet, apply scaling from register_types
+            temp = temp_raw * (get_register_scale(temp_data) or 1)
 
         return round(temp, 2)
 
@@ -256,10 +234,10 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
             )
             return
 
-        # Get limits from centralized config
-        config = self._get_offset_register_config()
-        min_temp = float(config.get("min_value", -5))
-        max_temp = float(config.get("max_value", 5))
+        # Get limits from register configuration
+        config = self._get_offset_static_config()
+        min_temp = float(config.min_value if config else -5)
+        max_temp = float(config.max_value if config else 5)
         offset = max(min_temp, min(max_temp, round(temperature, 0)))
 
         # Konvertiere zu Rohwert für Holding Register
@@ -441,7 +419,7 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
         self._attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
         self._attr_min_temp = 30
         self._attr_max_temp = 85
-        self._attr_target_temperature_step = 0.5
+        self._attr_target_temperature_step = 1
         self._attr_icon = self._icon
         self._attr_device_info = CALCULATED_DEVICE_INFO
         self._attr_translation_key = self._translation_key
@@ -450,15 +428,14 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
         """Get register data without DOMAIN prefix."""
         return get_coordinator_register_data(self.coordinator, register_name)
 
-    def _get_scaled_register_value(self, register_name, register_type):
+    def _get_register_value(self, register_name, register_type):
         """Get scaled value from a register."""
         data = self._get_register_data(f"{DOMAIN}_{register_name}")
         if data is None:
             return None
 
-        scale_factor = get_scale_from_config(f"{DOMAIN}_{register_name}", register_type)
         raw_value = get_register_value(data)
-        return raw_value * scale_factor if raw_value is not None else None
+        return raw_value if raw_value is not None else None
 
     @property
     def hvac_mode(self):
@@ -487,12 +464,12 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
     def current_temperature(self):
         """Return current temperature."""
         # Use DHW temperature as current temperature
-        return self._get_scaled_register_value(self._temp_register, INPUT_REGISTERS)
+        return self._get_register_value(self._temp_register, INPUT_REGISTERS)
 
     @property
     def target_temperature(self):
         """Return target temperature."""
-        return self._get_scaled_register_value(
+        return self._get_register_value(
             self._setpoint_register, HOLDING_REGISTERS
         )
 
@@ -525,10 +502,9 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
         if temperature is None:
             return
 
-        # Get scale factor from const.py for DHW setpoint
-        scale_factor = get_scale_from_config(
-            f"{DOMAIN}_{self._setpoint_register}", HOLDING_REGISTERS
-        )
+        # Get scale factor from register config for DHW setpoint
+        data = self._get_register_data(f"{DOMAIN}_{self._setpoint_register}")
+        scale_factor = get_register_scale(data)
 
         # Convert temperature to raw register value
         raw_value = (

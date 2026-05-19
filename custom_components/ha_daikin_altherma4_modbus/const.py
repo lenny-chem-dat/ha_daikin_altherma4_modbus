@@ -18,15 +18,9 @@ MAX_MODBUS_ADDRESS = 87
 
 # Register constants for Daikin Altherma 4
 REGISTER_OPERATION_MODE = "holding_3"  # Operation mode
-REGISTER_CURRENT_TEMP = (
-    "input_40"  # Leaving water temperature PHE (plate heat exchanger)
-)
-REGISTER_OFFSET_HEATING = (
-    "holding_54"  # Weather-dependent mode Main LWT Heating setpoint offset
-)
-REGISTER_OFFSET_COOLING = (
-    "holding_53"  # Weather-dependent mode Main LWT Cooling setpoint offset
-)
+REGISTER_CURRENT_TEMP = "input_40"  # Leaving water temperature PHE (plate heat exchanger)
+REGISTER_OFFSET_HEATING = "holding_54"  # Weather-dependent mode Main LWT Heating setpoint offset
+REGISTER_OFFSET_COOLING = "holding_55"  # Weather-dependent mode Main LWT Cooling setpoint offset
 
 # Additional register constants for Daikin Altherma 4
 REGISTER_QUIET_MODE = "holding_9"  # Quiet mode operation

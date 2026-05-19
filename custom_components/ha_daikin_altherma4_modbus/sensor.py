@@ -42,11 +42,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
         address = item.address
         register_name = item.register_name
         unit = item.unit or ""
-        # Get scale from data_type or fall back to item.scale for backward compatibility
-        if hasattr(item, "data_type") and item.data_type is not None:
-            scale = getattr(item.data_type, "scaling", 1)
-        else:
-            scale = getattr(item, "scale", 1)
         count = item.count or 1
         icon = item.icon or "mdi:information"
         enum_map = item.enum_map
@@ -63,7 +58,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 address=address,
                 unit=unit,
                 data_type=data_type,
-                scale=scale,
                 count=count,
                 icon=icon,
                 enum_map=enum_map,
@@ -165,7 +159,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         address,
         unit,
         data_type,
-        scale,
         count,
         icon,
         enum_map,
@@ -179,7 +172,8 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._entry = entry
         self._address = address
         self._data_type = data_type
-        self._scale = scale
+        # Scale only from register_types (data_type.scaling)
+        self._scale = getattr(data_type, "scaling", 1) if data_type else 1
         self._count = count
         self._icon = icon
         self._enum_map = enum_map
@@ -367,9 +361,13 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         if electric_power_sensor:
             # Externer Sensor
             state = self.coordinator.hass.states.get(electric_power_sensor)
+            unit = getattr(state, 'attributes', {}).get('unit_of_measurement') if state else None
             if state and state.state not in [None, "unknown", "unavailable"]:
                 try:
-                    electric_power = float(state.state)
+                    if unit == "kW":
+                        electric_power = float(state.state) * 1000
+                    else:
+                        electric_power = float(state.state)
                 except ValueError:
                     electric_power = None
             else:
@@ -382,7 +380,9 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
             from .const import REGISTER_HEAT_PUMP_POWER
 
             power_data = self.coordinator.data.get(REGISTER_HEAT_PUMP_POWER, {})
-            electric_power = get_register_value(power_data) or 0  # in W
+            electric_power = get_register_value(power_data) or 0  # in kW
+            # Convert kW to W for consistent calculation
+            electric_power = electric_power * 1000
 
         if electric_power and electric_power > 0 and heat_power > 0:
             # Beide Leistungen in W, direkte Berechnung

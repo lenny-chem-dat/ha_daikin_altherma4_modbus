@@ -81,7 +81,6 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         enum_map=None,
         entity_category=None,
         translation_key=None,
-        scale=None,
     ):
         super().__init__(coordinator)
 
@@ -101,14 +100,8 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         self._attr_translation_key = translation_key
         self._enum_map = enum_map
         self._data_type = data_type
-        # Handle scale: prefer explicit scale param, then data_type.scaling, then fallback to 1
-        if scale is not None:
-            self._scale = scale
-        elif data_type is not None:
-            # Support both RegisterDataType objects and numeric values
-            self._scale = getattr(data_type, "scaling", data_type) if data_type else 1
-        else:
-            self._scale = 1
+        # Scale only from register_types (data_type.scaling)
+        self._scale = getattr(data_type, "scaling", 1) if data_type else 1
         self._coordinator: Any = coordinator  # For writing operations - coordinator has data_manager attribute
 
     @property
