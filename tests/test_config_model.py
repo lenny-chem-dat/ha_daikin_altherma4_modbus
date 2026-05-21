@@ -32,6 +32,10 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
     homeassistant = types.ModuleType("homeassistant")
     monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
 
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+    exceptions_module.ConfigEntryNotReady = Exception
+    monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
+
     const_module = types.ModuleType("homeassistant.const")
     const_module.CONF_HOST = "host"
     const_module.CONF_PORT = "port"
@@ -209,6 +213,14 @@ def _load_config_flow_module(monkeypatch):
 
 
 def _load_integration_module(monkeypatch):
+    # Set up homeassistant mocks first
+    homeassistant = types.ModuleType("homeassistant")
+    monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
+
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+    exceptions_module.ConfigEntryNotReady = Exception
+    monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
+
     package_name = "custom_components.ha_daikin_altherma4_modbus"
     const_name = f"{package_name}.const"
     coordinator_manager_name = f"{package_name}.coordinator_manager"

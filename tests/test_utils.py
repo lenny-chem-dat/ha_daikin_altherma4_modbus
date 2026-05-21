@@ -54,6 +54,8 @@ def setup_home_assistant_mocks():
     """Set up all Home Assistant module mocks."""
     # Install mocks
     sys.modules["homeassistant"] = Mock()
+    sys.modules["homeassistant.exceptions"] = Mock()
+    sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = Exception
     sys.modules["homeassistant.const"] = MockConst()
     sys.modules["homeassistant.core"] = Mock()
     sys.modules["homeassistant.helpers"] = Mock()

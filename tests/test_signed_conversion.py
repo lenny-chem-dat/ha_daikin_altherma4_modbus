@@ -10,6 +10,11 @@ sys.path.insert(
     0, str(project_root / "custom_components" / "ha_daikin_altherma4_modbus")
 )
 
+# Set up Home Assistant mocks before importing integration modules
+from tests.test_utils import setup_home_assistant_mocks  # noqa: E402
+
+setup_home_assistant_mocks()
+
 from custom_components.ha_daikin_altherma4_modbus.common import (  # noqa: E402
     clamp_16bit,
     to_signed_16bit,

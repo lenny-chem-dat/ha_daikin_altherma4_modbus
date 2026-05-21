@@ -33,6 +33,14 @@ def _load_integration_module(
     manager_setup_side_effect=None,
     forward_setups_side_effect=None,
 ):
+    # Set up homeassistant mocks first
+    homeassistant = types.ModuleType("homeassistant")
+    monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
+
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+    exceptions_module.ConfigEntryNotReady = Exception
+    monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
+
     package_name = _install_fake_package(monkeypatch)
     const_name = f"{package_name}.const"
     coordinator_manager_name = f"{package_name}.coordinator_manager"
@@ -146,9 +154,10 @@ async def test_setup_rolls_back_on_manager_setup_failure(monkeypatch):
         monkeypatch, manager_setup_side_effect=RuntimeError("setup failed")
     )
 
-    result = await integration.async_setup_entry(hass, entry)
+    # Verify ConfigEntryNotReady is raised
+    with pytest.raises(Exception, match="Failed to set up entry"):
+        await integration.async_setup_entry(hass, entry)
 
-    assert result is False
     manager = manager_cls.last_instance
     unified = unified_cls.last_instance
     manager.async_setup.assert_awaited_once()
@@ -173,9 +182,10 @@ async def test_setup_rolls_back_on_forward_setups_failure(monkeypatch):
         monkeypatch, forward_setups_side_effect=RuntimeError("forward failed")
     )
 
-    result = await integration.async_setup_entry(hass, entry)
+    # Verify ConfigEntryNotReady is raised
+    with pytest.raises(Exception, match="Failed to set up entry"):
+        await integration.async_setup_entry(hass, entry)
 
-    assert result is False
     manager = manager_cls.last_instance
     unified = unified_cls.last_instance
     manager.async_setup.assert_awaited_once()

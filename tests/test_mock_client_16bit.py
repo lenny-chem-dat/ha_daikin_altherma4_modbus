@@ -5,9 +5,6 @@ import types
 
 import pytest
 
-# Import after stubs are set up
-from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
-
 
 def _ensure_homeassistant_stubs():
     """Ensure homeassistant stubs are available and correctly configured."""
@@ -20,6 +17,10 @@ def _ensure_homeassistant_stubs():
     homeassistant = types.ModuleType("homeassistant")
     homeassistant.__path__ = []
     sys.modules["homeassistant"] = homeassistant
+
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+    exceptions_module.ConfigEntryNotReady = Exception
+    sys.modules["homeassistant.exceptions"] = exceptions_module
 
     const_module = types.ModuleType("homeassistant.const")
     const_module.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
@@ -49,6 +50,9 @@ def _ensure_homeassistant_stubs():
 
 # Setup stubs immediately
 _ensure_homeassistant_stubs()
+
+# Import after stubs are set up
+from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
 
 
 @pytest.mark.asyncio

@@ -17,6 +17,10 @@ def _ensure_homeassistant_stubs():
     homeassistant.__path__ = []
     sys.modules["homeassistant"] = homeassistant
 
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+    exceptions_module.ConfigEntryNotReady = Exception
+    sys.modules["homeassistant.exceptions"] = exceptions_module
+
     const_module = types.ModuleType("homeassistant.const")
     const_module.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
     sys.modules["homeassistant.const"] = const_module

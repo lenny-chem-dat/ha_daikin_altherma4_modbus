@@ -1,5 +1,7 @@
 import logging
 
+from homeassistant.exceptions import ConfigEntryNotReady
+
 from .config_entry_utils import entry_data_value, entry_value
 from .const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
 from .coordinator_manager import CoordinatorManager, UnifiedCoordinator
@@ -41,7 +43,7 @@ async def async_setup_entry(hass, entry):
             if not client.connected:
                 _LOGGER.error(f"Cannot connect to {host}:{port} during setup")
                 await RealModbusTcpClient.async_close_cached_client(host, port)
-                return False
+                raise ConfigEntryNotReady(f"Cannot connect to {host}:{port}")
             # Disconnect after test - coordinators will create their own connections
             await client.disconnect()
             _LOGGER.debug(f"Connection test successful during setup to {host}:{port}")
@@ -50,8 +52,7 @@ async def async_setup_entry(hass, entry):
                 f"Connection test failed during setup to {host}:{port}: {err}"
             )
             await RealModbusTcpClient.async_close_cached_client(host, port)
-            return False
-
+            raise ConfigEntryNotReady(f"Connection failed to {host}:{port}") from err
     manager = CoordinatorManager(
         hass, host, port, scan_interval, slow_scan_interval, demo_mode
     )
@@ -126,7 +127,7 @@ async def async_setup_entry(hass, entry):
         if not domain_data and DOMAIN in hass.data:
             hass.data.pop(DOMAIN, None)
 
-        return False
+        raise ConfigEntryNotReady(f"Failed to set up entry: {err}") from err
 
 
 async def async_unload_entry(hass, entry):

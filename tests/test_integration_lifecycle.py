@@ -31,6 +31,14 @@ def _install_fake_package(monkeypatch) -> str:
 
 def _load_integration_module(monkeypatch):
     """Load integration module with mocked dependencies."""
+    # Set up homeassistant mocks first
+    homeassistant = types.ModuleType("homeassistant")
+    monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
+
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+    exceptions_module.ConfigEntryNotReady = Exception
+    monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
+
     package_name = _install_fake_package(monkeypatch)
     const_name = f"{package_name}.const"
     coordinator_manager_name = f"{package_name}.coordinator_manager"
@@ -279,10 +287,9 @@ async def test_async_setup_entry_unified_coordinator_failure(monkeypatch):
         options={"scan_interval": 15, "slow_scan_interval": 300, "demo_mode": False},
     )
 
-    result = await integration.async_setup_entry(hass, entry)
-
-    # Verify failure
-    assert result is False
+    # Verify ConfigEntryNotReady is raised
+    with pytest.raises(Exception, match="Failed to set up entry"):
+        await integration.async_setup_entry(hass, entry)
 
     # Verify rollback occurred
     manager = manager_cls.last_instance
@@ -321,10 +328,9 @@ async def test_async_setup_entry_platform_forward_failure(monkeypatch):
         options={"scan_interval": 15, "slow_scan_interval": 300, "demo_mode": False},
     )
 
-    result = await integration.async_setup_entry(hass, entry)
-
-    # Verify failure
-    assert result is False
+    # Verify ConfigEntryNotReady is raised
+    with pytest.raises(Exception, match="Failed to set up entry"):
+        await integration.async_setup_entry(hass, entry)
 
     # Verify rollback occurred
     manager = manager_cls.last_instance
@@ -366,10 +372,9 @@ async def test_async_setup_entry_manager_setup_failure(monkeypatch):
         options={"scan_interval": 15, "slow_scan_interval": 300, "demo_mode": False},
     )
 
-    result = await integration.async_setup_entry(hass, entry)
-
-    # Verify failure
-    assert result is False
+    # Verify ConfigEntryNotReady is raised
+    with pytest.raises(Exception, match="Failed to set up entry"):
+        await integration.async_setup_entry(hass, entry)
 
     # Verify rollback occurred
     manager = manager_cls.last_instance

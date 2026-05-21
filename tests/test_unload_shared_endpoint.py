@@ -9,6 +9,14 @@ import pytest
 
 def _load_integration_module(monkeypatch, close_cached_client_mock: AsyncMock):
     """Load integration __init__ with lightweight dependency stubs."""
+    # Set up homeassistant mocks first
+    homeassistant = types.ModuleType("homeassistant")
+    monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
+
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+    exceptions_module.ConfigEntryNotReady = Exception
+    monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
+
     package_name = "custom_components.ha_daikin_altherma4_modbus"
     const_name = f"{package_name}.const"
     coordinator_manager_name = f"{package_name}.coordinator_manager"
