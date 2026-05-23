@@ -491,11 +491,11 @@
       "input_83": {
         "name": "Gerätebetriebsart",
         "state": {
-          "stop": "Stopp",
-          "tank_heat_up": "Aufheizen des Speichers",
-          "space_heating": "Raumheizung",
-          "space_cooling": "Raumkühlung",
-          "actuator": "Aktor"
+          "Stop": "Stopp",
+          "Tank Heat Up": "Aufheizen des Speichers",
+          "Space heating": "Raumheizung",
+          "Space cooling": "Raumkühlung",
+          "Actuator": "Aktor"
         }
       },
       "input_84": {
